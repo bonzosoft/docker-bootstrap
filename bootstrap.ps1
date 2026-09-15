@@ -35,6 +35,9 @@ process {
         ErrorAction  = 'Stop'
     }
     Start-Process @splat
+    if ($LASTEXITCODE -ne 0) {
+        throw "ERROR."
+    }
     
     Write-Information -MessageData "Runing: apt install gh."
     $splat = @{
@@ -46,6 +49,9 @@ process {
         ErrorAction  = 'Stop'
     }
     Start-Process @splat
+    if ($LASTEXITCODE -ne 0) {
+        throw "ERROR."
+    }
     
     Write-Information -MessageData "Runing: apt config set prompt disabled."
     $splat = @{
@@ -57,6 +63,9 @@ process {
         ErrorAction  = 'Stop'
     }
     Start-Process @splat
+    if ($LASTEXITCODE -ne 0) {
+        throw "ERROR."
+    }
     
     Write-Information -MessageData "Checking local configuration."
     [hashtable]$configData = Get-Content -Path $configFile -ErrorAction 'SilentlyContinue' | ConvertFrom-Json -Depth 9 -AsHashtable -ErrorAction 'SilentlyContinue'
@@ -88,6 +97,9 @@ process {
                 ErrorAction  = 'Stop'
             }
             Start-Process @splat
+            if ($LASTEXITCODE -ne 0) {
+                throw "ERROR."
+            }
         }
 
         Write-Information -MessageData "Runing: gh auth status."
@@ -122,6 +134,7 @@ process {
             "--branch", $repositoryData.Branch
             "--single-branch"
             "--depth", 1
+            "--recurse-submodules"
         )
         Environment = @{GH_TOKEN = $configData.Git.Token}
         NoNewWindow  = $true
@@ -129,6 +142,9 @@ process {
         ErrorAction  = 'Stop'
     }
     Start-Process @splat
+    if ($LASTEXITCODE -ne 0) {
+        throw "ERROR."
+    }
 
     foreach ($item in @("pwsh")) {
         [IO.FIleInfo]$source = Join-Path -Path $PWD -ChildPath @($($repositoryData.Name), "${item}.sh")
@@ -148,6 +164,9 @@ process {
                 ErrorAction  = 'Stop'
             }
             Start-Process @splat
+            if ($LASTEXITCODE -ne 0) {
+                throw "ERROR."
+            }
         }
     }
 }
