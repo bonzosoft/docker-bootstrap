@@ -8,6 +8,7 @@ docker run --rm -it -v ${PWD}:${PWD}:rw -w ${PWD} ghcr.io/bonzosoft/pwsh pwsh -N
 ````
 
 Si ya está iniciado el contenedor con ``pwsh`` se puede usar el comando:
+
 ````powershell
 $name = "docker.bootstrap"; $branch = "main"; $path = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath ([System.Guid]::NewGuid()); git clone --branch $branch --single-branch --depth 1 https://github.com/bonzosoft/$name.git $path; & (Join-Path -Path $path -ChildPath bootstrap.ps1); Remove-Item -Path $path -Recurse -Force
 ````

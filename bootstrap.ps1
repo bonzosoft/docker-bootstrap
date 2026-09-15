@@ -19,8 +19,8 @@ begin {
     [hashtable]$repositoryData             = @{}
     [uri]$repositoryData.Domain            = "https://github.com"
     [string]$repositoryData.Organization   = "bonzosoft"
-    [string]$repositoryData.Name           = "common"
-    [string]$repositoryData.Branch         = "bw"
+    [string]$repositoryData.Name           = "docker.common"
+    [string]$repositoryData.Branch         = "main"
     [IO.DirectoryInfo]$repositoryData.Path = Join-Path -Path $PWD -ChildPath @($repositoryData.Name)
 }
 
