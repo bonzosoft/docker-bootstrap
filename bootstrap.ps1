@@ -11,8 +11,8 @@ begin {
     $InformationPreference = 'Continue'
 
     # Script start =============================================================
-    [IO.FileInfo]$thisScript = Get-Item -Path $PSCommandPath
-    Write-Information -MessageData "Loading script '$thisScript'."
+    [Collections.Generic.List[IO.FileInfo]]$thisScript = $PSCommandPath
+    Write-Information -MessageData "Loading script '$(thisScript)[0]'."
     
     [IO.FIleInfo]$configFile = Join-Path -Path $PWD -ChildPath @(".config", "config.json")
 
@@ -173,7 +173,8 @@ process {
 
 end {
     # Script end ===============================================================
-    Write-Information -MessageData "Completed script '$thisScript'."
+    Write-Information -MessageData "Completed script '$($thisScript[0])'."
+    $thisScript.RemoveAt(0)
 }
 
 clean {
