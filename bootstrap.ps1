@@ -12,7 +12,7 @@ begin {
 
     # Script start =============================================================
     [Collections.Generic.List[IO.FileInfo]]$thisScript = $PSCommandPath
-    Write-Information -MessageData "Loading script '$(thisScript)[0]'."
+    Write-Information -MessageData "Loading script '$($thisScript[0])'."
     
     [IO.FIleInfo]$configFile = Join-Path -Path $PWD -ChildPath @(".config", "config.json")
 
