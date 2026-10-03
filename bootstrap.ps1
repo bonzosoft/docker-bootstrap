@@ -16,12 +16,12 @@ begin {
     
     [IO.FIleInfo]$configFile = Join-Path -Path $PWD -ChildPath @(".config", "config.json")
 
-    [hashtable]$repositoryData             = @{}
-    [uri]$repositoryData.Domain            = "https://github.com"
-    [string]$repositoryData.Organization   = "bonzosoft"
-    [string]$repositoryData.Name           = "docker-deploy"
-    [string]$repositoryData.Branch         = "main"
-    [IO.DirectoryInfo]$repositoryData.Path = Join-Path -Path $PWD -ChildPath @($repositoryData.Name)
+    [hashtable]$repository             = @{}
+    [uri]$repository.Domain            = "https://github.com"
+    [string]$repository.Organization   = "bonzosoft"
+    [string]$repository.Name           = "docker-deploy"
+    [string]$repository.Branch         = "main"
+    [IO.DirectoryInfo]$repository.Path = Join-Path -Path $PWD -ChildPath @($repository.Name)
 }
 
 process {
@@ -72,10 +72,10 @@ process {
     if ($null -eq $configData) {
         [hashtable]$configData = @{}
     }
-    if (-not($configData.Keys -contains "Git")) {
+    if (-not $configData.ContainsKey("Git")) {
         [hashtable]$configData.Git = @{}
     }
-    if (-not($configData.Git.Keys -contains "Token")) {
+    if (-not $configData.Git.ContainsKey("Token")) {
         [string]$configData.Git.Token = ""
     }
     
@@ -88,8 +88,8 @@ process {
                 ArgumentList = @(
                     "auth"
                     "login"
-                    "--git-protocol", $repositoryData.Domain.Scheme
-                    "--hostname", $repositoryData.Domain.Host
+                    "--git-protocol", $repository.Domain.Scheme
+                    "--hostname", $repository.Domain.Host
                 )
                 Environment  = @{}
                 NoNewWindow  = $true
@@ -117,9 +117,9 @@ process {
     }
     while (-not $successLogin)
     
-    if (Test-Path -Path $repositoryData.Path) {
+    if (Test-Path -Path $repository.Path) {
         Write-Information -MessageData "Removing local repository."
-        Remove-Item -Path $repositoryData.Path -Recurse -Force
+        Remove-Item -Path $repository.Path -Recurse -Force
     }
     
     Write-Information -MessageData "Runing: gh repo clone."
@@ -128,10 +128,10 @@ process {
         ArgumentList = @(
             "repo"
             "clone"
-           ($repositoryData.Organization) + "/" + $($repositoryData.Name)
-            $repositoryData.Path
+           ($repository.Organization) + "/" + $($repository.Name)
+            $repository.Path
             "--"
-            "--branch", $repositoryData.Branch
+            "--branch", $repository.Branch
             "--single-branch"
             "--depth", 1
             "--recurse-submodules"
@@ -147,7 +147,7 @@ process {
     }
 
     foreach ($item in @("pwsh")) {
-        [IO.FIleInfo]$source = Join-Path -Path $PWD -ChildPath @($($repositoryData.Name), "${item}.sh")
+        [IO.FIleInfo]$source = Join-Path -Path $PWD -ChildPath @($($repository.Name), "${item}.sh")
         [IO.FIleInfo]$target = Join-Path -Path $PWD -ChildPath @($item)
     
         if (Test-Path -Path $source) {
@@ -173,7 +173,7 @@ process {
 
 end {
     # Script end ===============================================================
-    Write-Information -MessageData "Completed script '$($thisScript[0])'."
+    Write-Information -MessageData "Completed script execution '$($thisScript[0])'."
     $thisScript.RemoveAt(0)
 }
 
