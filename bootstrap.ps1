@@ -4,7 +4,7 @@
 [OutputType([void])]
 param()
 
-begin {
+try {
     # Command line setup =======================================================
     Set-StrictMode -Version 'Latest'
     $ErrorActionPreference = 'Stop'
@@ -14,17 +14,17 @@ begin {
     [Collections.Generic.List[IO.FileInfo]]$thisScript = $PSCommandPath
     Write-Information -MessageData "Loading script '$($thisScript[0])'."
     
+    # config file path
     [IO.FIleInfo]$configFile = Join-Path -Path $PWD -ChildPath @(".config", "config.json")
 
+    # repository information
     [hashtable]$repository             = @{}
     [uri]$repository.Domain            = "https://github.com"
     [string]$repository.Organization   = "bonzosoft"
     [string]$repository.Name           = "docker-deploy"
     [string]$repository.Branch         = "main"
     [IO.DirectoryInfo]$repository.Path = Join-Path -Path $PWD -ChildPath @($repository.Name)
-}
 
-process {
     Write-Information -MessageData "Runing: apt update."
     $splat = @{
         FilePath     = "apt"
@@ -112,7 +112,6 @@ process {
             ErrorAction  = 'Stop'
         }
         Start-Process @splat
-        Write-Information -MessageData "LastExitCode= $LASTEXITCODE."
         $successLogin = -not $LASTEXITCODE
     }
     while (-not $successLogin)
@@ -136,7 +135,7 @@ process {
             "--depth", 1
             "--recurse-submodules"
         )
-        Environment = @{GH_TOKEN = $configData.Git.Token}
+        Environment  = @{GH_TOKEN = $configData.Git.Token}
         NoNewWindow  = $true
         Wait         = $true
         ErrorAction  = 'Stop'
@@ -150,15 +149,15 @@ process {
         [IO.FIleInfo]$source = Join-Path -Path $PWD -ChildPath @($($repository.Name), "${item}.sh")
         [IO.FIleInfo]$target = Join-Path -Path $PWD -ChildPath @($item)
     
-        if (Test-Path -Path $source) {
-            Write-Information -MessageData "Creating link for '${item}'."
+        if (Test-Path -Path $source -PathType 'Leaf') {
+            Write-Information -MessageData "Creating link for '$item'."
             New-Item -Path $target -Value $source -ItemType 'SymbolicLink' -Force | Out-Null
         
-            Write-Information -MessageData "Setting '${item}' as executable."
+            Write-Information -MessageData "Setting '$item' as executable."
             $splat = @{
-                FilePath = "chmod"
+                FilePath     = "chmod"
                 ArgumentList = @("+x", $source.FullName)
-                Environment = @{GH_TOKEN = $configData.Git.Token}
+                Environment  = @{GH_TOKEN = $configData.Git.Token}
                 NoNewWindow  = $true
                 Wait         = $true
                 ErrorAction  = 'Stop'
@@ -170,13 +169,10 @@ process {
         }
     }
 }
-
-end {
-    # Script end ===============================================================
+catch {
+    Write-Error -ErrorRecord $PSItem
+}
+finally {
     Write-Information -MessageData "Completed script execution '$($thisScript[0])'."
     $thisScript.RemoveAt(0)
-}
-
-clean {
-    # nop
 }
