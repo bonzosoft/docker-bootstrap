@@ -20,6 +20,7 @@ try {
     # Configuration file path --------------------------------------------------
     [IO.FileInfo]$configFile = Join-Path -Path ([IO.FileInfo]$PWD.Path) -ChildPath @(".config", "config.json")
     [IO.DirectoryInfo]$ghDirectory = Join-Path -Path $configFile.Directory -ChildPath @("gh")
+    [bool]$dispose = $false
 
     # Repository configuration -------------------------------------------------
     [hashtable]$repository = [pscustomobject]@{}
@@ -200,10 +201,13 @@ try {
 }
 catch {
     Write-Error -ErrorRecord $PSItem
-    Write-Error -Exception $PSItem.Excetpion
+    Write-Error -Exception $PSItem.Exception
     Write-Error -Message $PSItem.ScriptStackTrace
 }
 finally {
+    if ($dispose) {
+        Remove-Item -Path $ghDirectory -Recurse -Force
+    }
     Write-Information -MessageData "Completed script execution '$($thisScript[0])'."
     $thisScript.RemoveAt(0)
 }
