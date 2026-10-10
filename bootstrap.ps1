@@ -28,9 +28,9 @@ try {
     $repository | Add-Member -MemberType 'NoteProperty'   -Name "Name"         -Value "docker-deploy"
     $repository | Add-Member -MemberType 'NoteProperty'   -Name "Branch"       -Value "main"
     $repository | Add-Member -MemberTYpe 'NoteProperty'   -Name "Directory"    -Value ([IO.DirectoryInfo]$PWD.Path)
-    $repository | Add-Member -MemberType 'ScriptProperty' -Name "Path"         -Value [scriptblock]{
+    $repository | Add-Member -MemberType 'ScriptProperty' -Name "Path"         -Value ([scriptblock]{
         return [IO.FileInfo](Join-Path -Path $this.Directory -ChildPath @($this.Name, ".git"))
-    }
+    })
 
     Write-Information -MessageData "Runing command: apt update."
     $splat = @{
