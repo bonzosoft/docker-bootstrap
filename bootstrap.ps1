@@ -40,10 +40,11 @@ try {
         Environment  = @{}
         NoNewWindow  = $true
         Wait         = $true
+        PassThru     = $true
         ErrorAction  = 'Stop'
     }
-    Start-Process @splat
-    if ($LASTEXITCODE -ne 0) {
+    $exitCode = Start-Process @splat
+    if ($exitCode -ne 0) {
         throw "Command finished with exit code: ${LASTEXITCODE}."
     }
     
@@ -54,10 +55,11 @@ try {
         Environment  = @{}
         NoNewWindow  = $true
         Wait         = $true
+        PassThru     = $true
         ErrorAction  = 'Stop'
     }
-    Start-Process @splat
-    if ($LASTEXITCODE -ne 0) {
+    $exitCode = Start-Process @splat
+    if ($exitCode -ne 0) {
         throw "Command finished with exit code: ${LASTEXITCODE}."
     }
     
@@ -68,10 +70,11 @@ try {
         Environment  = @{}
         NoNewWindow  = $true
         Wait         = $true
+        PassThru     = $true
         ErrorAction  = 'Stop'
     }
-    Start-Process @splat
-    if ($LASTEXITCODE -ne 0) {
+    $exitCode = Start-Process @splat
+    if ($exitCode -ne 0) {
         throw "Command finished with exit code: ${LASTEXITCODE}."
     }
     
@@ -100,10 +103,11 @@ try {
             }
             NoNewWindow  = $true
             Wait         = $true
+            PassThru     = $true
             ErrorAction  = 'Stop'
         }
-        Start-Process @splat
-        if ($LASTEXITCODE -ne 0) {
+        $exitCode = Start-Process @splat
+        if ($exitCode -ne 0) {
             Write-Information -MessageData "Runing command: gh auth login."
             $splat = @{
                 FilePath     = "gh"
@@ -119,10 +123,11 @@ try {
                 }
                 NoNewWindow  = $true
                 Wait         = $true
+                PassThru     = $true
                 ErrorAction  = 'Stop'
             }
-            Start-Process @splat
-            if ($LASTEXITCODE -ne 0) {
+            $exitCode = Start-Process @splat
+            if ($exitCode -ne 0) {
                 throw "Command finished with exit code: ${LASTEXITCODE}."
             }
         }
@@ -157,10 +162,11 @@ try {
         }
         NoNewWindow  = $true
         Wait         = $true
+        PassThru     = $true
         ErrorAction  = 'Stop'
     }
-    Start-Process @splat
-    if ($LASTEXITCODE -ne 0) {
+    $exitCode = Start-Process @splat
+    if ($exitCode -ne 0) {
         throw "Command finished with exit code: ${LASTEXITCODE}."
     }
 
@@ -179,11 +185,12 @@ try {
                 Environment  = @{}
                 NoNewWindow  = $true
                 Wait         = $true
+                PassThru     = $true
                 ErrorAction  = 'Stop'
             }
-            Start-Process @splat
-            if ($LASTEXITCODE -ne 0) {
-                throw "ERROR."
+            $exitCode = Start-Process @splat
+            if ($exitCode -ne 0) {
+                throw "Command finished with exit code: ${LASTEXITCODE}."
             }
         }
     }
