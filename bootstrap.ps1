@@ -118,7 +118,7 @@ try {
                     "--hostname", $repository.Domain.Host
                 )
                 Environment  = @{
-                    GH_TOKEN      = $configData.Git.Token
+                    #GH_TOKEN      = $configData.Git.Token
                     GH_CONFIG_DIR = $ghDirectory.FullName
                 }
                 NoNewWindow  = $true
