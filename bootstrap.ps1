@@ -18,7 +18,7 @@ try {
 
 
     # Configuration file path --------------------------------------------------
-    [IO.FileInfo]$configFile = Join-Path -Path $PWD -ChildPath @(".config", "config.json")
+    [IO.FileInfo]$configFile = Join-Path -Path ([IO.FileInfo]$PWD.Path) -ChildPath @(".config", "config.json")
 
 
     # Repository configuration -------------------------------------------------
@@ -29,9 +29,10 @@ try {
     $repository | Add-Member -MemberType 'NoteProperty'   -Name "Branch"       -Value "main"
     $repository | Add-Member -MemberTYpe 'NoteProperty'   -Name "Directory"    -Value ([IO.DirectoryInfo]$PWD.Path)
     $repository | Add-Member -MemberType 'ScriptProperty' -Name "Path"         -Value ([scriptblock]{
-        return [IO.FileInfo](Join-Path -Path $this.Directory -ChildPath @($this.Name, ".git"))
+        return [IO.FileInfo](Join-Path -Path $this.Directory -ChildPath @($this.Name))
     })
 
+    # Script -------------------------------------------------------------------
     Write-Information -MessageData "Runing command: apt update."
     $splat = @{
         FilePath     = "apt"
@@ -155,8 +156,8 @@ try {
     }
 
     foreach ($item in @("pwsh")) {
-        [IO.FIleInfo]$source = Join-Path -Path $PWD -ChildPath @($repository.Name, "${item}.sh")
-        [IO.FIleInfo]$target = Join-Path -Path $PWD -ChildPath @($item)
+        [IO.FIleInfo]$source = Join-Path -Path ([IO.FileInfo]$PWD.Path) -ChildPath @($repository.Name, "${item}.sh")
+        [IO.FIleInfo]$target = Join-Path -Path ([IO.FileInfo]$PWD.Path) -ChildPath @($item)
     
         if (Test-Path -Path $source -PathType 'Leaf') {
             Write-Information -MessageData "Creating link for '$item'."
