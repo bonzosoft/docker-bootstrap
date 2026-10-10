@@ -117,8 +117,10 @@ try {
                     "--web"
                     "--git-protocol", $repository.Domain.Scheme
                     "--hostname", $repository.Domain.Host
+                    #"--insecure-storage"
                 )
                 Environment  = @{
+                    GH_PROMPT_DISABLED = $true
                     GH_TOKEN      = $configData.Git.Token
                     GH_CONFIG_DIR = $ghDirectory.FullName
                 }
