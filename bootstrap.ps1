@@ -5,29 +5,32 @@
 param()
 
 try {
-    # Command line setup =======================================================
+    # Command line setup -------------------------------------------------------
     Set-StrictMode -Version 'Latest'
     $ErrorActionPreference = 'Stop'
     $InformationPreference = 'Continue'
 
-    # Script start =============================================================
-    [Collections.Generic.List[IO.FileInfo]]$thisScript = $PSCommandPath
+
+    # Script start -------------------------------------------------------------
+    [Collections.Generic.List[IO.FileInfo]]$thisScript = @()
+    $thisScript.Insert(0, $PSCommandPath)
     Write-Information -MessageData "Loading script '$($thisScript[0])'."
-    
-    # config file path
+
+
+    # Configuration file path --------------------------------------------------
     [IO.FileInfo]$configFile = Join-Path -Path $PWD -ChildPath @(".config", "config.json")
 
-    # repository information
-    [hashtable]$repository             = @{}
-    $repository.Domain       = [uri]::new("https://github.com")
-    $repository.Organization = "bonzosoft"
-    $repository.Name         = "docker-deploy"
-    $repository.Branch       = "main"
-    $repository.Path         = [IO.DirectoryInfo]::new(
-        (Join-Path `
-            -Path $PWD `
-            -ChildPath @($repository.Name))
-    )
+
+    # Repository configuration -------------------------------------------------
+    [hashtable]$repository = [pscustomobject]@{}
+    $repository | Add-Member -MemberType 'NoteProperty'   -Name "Domain"       -Value ([uri]"https://github.com")
+    $repository | Add-Member -MemberType 'NoteProperty'   -Name "Organization" -Value "bonzosoft"
+    $repository | Add-Member -MemberType 'NoteProperty'   -Name "Name"         -Value "docker-deploy"
+    $repository | Add-Member -MemberType 'NoteProperty'   -Name "Branch"       -Value "main"
+    $repository | Add-Member -MemberTYpe 'NoteProperty'   -Name "Directory"    -Value ([IO.DirectoryInfo]$PWD.Path)
+    $repository | Add-Member -MemberType 'ScriptProperty' -Name "Path"         -Value [scriptblock]{
+        return [IO.FileInfo](Join-Path -Path $this.Directory -ChildPath @($this.Name, ".git"))
+    }
 
     Write-Information -MessageData "Runing command: apt update."
     $splat = @{
@@ -134,7 +137,7 @@ try {
             "repo"
             "clone"
            ($repository.Organization) + "/" + $($repository.Name)
-            $repository.Path
+            $repository.Path.FullName
             "--"
             "--branch", $repository.Branch
             "--single-branch"
