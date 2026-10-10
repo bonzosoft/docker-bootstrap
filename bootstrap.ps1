@@ -15,7 +15,7 @@ try {
     Write-Information -MessageData "Loading script '$($thisScript[0])'."
     
     # config file path
-    [IO.FileInfo]$configFile = Join-Path -Path $thisScript[0].Directory.Parent -ChildPath @(".config", "config.json")
+    [IO.FileInfo]$configFile = Join-Path -Path $PWD -ChildPath @(".config", "config.json")
 
     # repository information
     [hashtable]$repository             = @{}
@@ -25,7 +25,7 @@ try {
     $repository.Branch       = "main"
     $repository.Path         = [IO.DirectoryInfo]::new(
         (Join-Path `
-            -Path $thisScript[0].Directory.Parent`
+            -Path $PWD `
             -ChildPath @($repository.Name))
     )
 
@@ -152,8 +152,8 @@ try {
     }
 
     foreach ($item in @("pwsh")) {
-        [IO.FIleInfo]$source = Join-Path -Path $thisScript[0].Directory.Parent -ChildPath @($repository.Name, "${item}.sh")
-        [IO.FIleInfo]$target = Join-Path -Path $thisScript[0].Directory.Parent -ChildPath @($item)
+        [IO.FIleInfo]$source = Join-Path -Path $PWD -ChildPath @($repository.Name, "${item}.sh")
+        [IO.FIleInfo]$target = Join-Path -Path $PWD -ChildPath @($item)
     
         if (Test-Path -Path $source -PathType 'Leaf') {
             Write-Information -MessageData "Creating link for '$item'."
