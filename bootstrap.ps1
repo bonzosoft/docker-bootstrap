@@ -130,9 +130,9 @@ try {
                 PassThru     = $true
                 ErrorAction  = 'Stop'
             }
-            $exitCode = Start-Process @splat
-            if ($exitCode -ne 0) {
-                throw "Command finished with exit code: ${LASTEXITCODE}."
+            $process = Start-Process @splat
+            if ($process.ExitCode -ne 0) {
+                throw "Command finished with exit code: $($pocess.ExitCode)."
             }
         }
         else {
