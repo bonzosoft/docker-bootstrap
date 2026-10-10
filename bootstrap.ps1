@@ -43,9 +43,9 @@ try {
         PassThru     = $true
         ErrorAction  = 'Stop'
     }
-    $exitCode = Start-Process @splat
-    if ($exitCode -ne 0) {
-        throw "Command finished with exit code: ${LASTEXITCODE}."
+    $process = Start-Process @splat
+    if ($process.ExitCode -ne 0) {
+        throw "Command finished with exit code: $($pocess.ExitCode)."
     }
     
     Write-Information -MessageData "Runing command: apt install gh."
@@ -58,9 +58,9 @@ try {
         PassThru     = $true
         ErrorAction  = 'Stop'
     }
-    $exitCode = Start-Process @splat
-    if ($exitCode -ne 0) {
-        throw "Command finished with exit code: ${LASTEXITCODE}."
+    $process = Start-Process @splat
+    if ($process.ExitCode -ne 0) {
+        throw "Command finished with exit code: $($pocess.ExitCode)."
     }
     
     Write-Information -MessageData "Runing command: apt config set prompt disabled."
@@ -73,9 +73,9 @@ try {
         PassThru     = $true
         ErrorAction  = 'Stop'
     }
-    $exitCode = Start-Process @splat
-    if ($exitCode -ne 0) {
-        throw "Command finished with exit code: ${LASTEXITCODE}."
+    $process = Start-Process @splat
+    if ($process.ExitCode -ne 0) {
+        throw "Command finished with exit code: $($pocess.ExitCode)."
     }
     
     Write-Information -MessageData "Checking local configuration."
@@ -106,8 +106,8 @@ try {
             PassThru     = $true
             ErrorAction  = 'Stop'
         }
-        $exitCode = Start-Process @splat
-        if ($exitCode -ne 0) {
+        $process = Start-Process @splat
+        if ($process.ExitCode -ne 0) {
             Write-Information -MessageData "Runing command: gh auth login."
             $splat = @{
                 FilePath     = "gh"
@@ -165,9 +165,9 @@ try {
         PassThru     = $true
         ErrorAction  = 'Stop'
     }
-    $exitCode = Start-Process @splat
-    if ($exitCode -ne 0) {
-        throw "Command finished with exit code: ${LASTEXITCODE}."
+    $process = Start-Process @splat
+    if ($process.ExitCode -ne 0) {
+        throw "Command finished with exit code: $($pocess.ExitCode)."
     }
 
     foreach ($item in @("pwsh")) {
@@ -188,9 +188,9 @@ try {
                 PassThru     = $true
                 ErrorAction  = 'Stop'
             }
-            $exitCode = Start-Process @splat
-            if ($exitCode -ne 0) {
-                throw "Command finished with exit code: ${LASTEXITCODE}."
+            $process = Start-Process @splat
+            if ($process.ExitCode -ne 0) {
+                throw "Command finished with exit code: $($pocess.ExitCode)."
             }
         }
     }
