@@ -15,17 +15,21 @@ try {
     Write-Information -MessageData "Loading script '$($thisScript[0])'."
     
     # config file path
-    [IO.FIleInfo]$configFile = Join-Path -Path $PWD -ChildPath @(".config", "config.json")
+    [IO.FileInfo]$configFile = Join-Path -Path $thisScript[0].Directory.Parent -ChildPath @(".config", "config.json")
 
     # repository information
     [hashtable]$repository             = @{}
-    [uri]$repository.Domain            = "https://github.com"
-    [string]$repository.Organization   = "bonzosoft"
-    [string]$repository.Name           = "docker-deploy"
-    [string]$repository.Branch         = "main"
-    [IO.DirectoryInfo]$repository.Path = Join-Path -Path $PWD -ChildPath @($repository.Name)
+    $repository.Domain       = [uri]::new("https://github.com")
+    $repository.Organization = "bonzosoft"
+    $repository.Name         = "docker-deploy"
+    $repository.Branch       = "main"
+    $repository.Path         = [IO.DirectoryInfo]::new(
+        (Join-Path `
+            -Path $thisScript[0].Directory.Parent`
+            -ChildPath @($repository.Name))
+    )
 
-    Write-Information -MessageData "Runing: apt update."
+    Write-Information -MessageData "Runing command: apt update."
     $splat = @{
         FilePath     = "apt"
         ArgumentList = @("update")
@@ -36,10 +40,10 @@ try {
     }
     Start-Process @splat
     if ($LASTEXITCODE -ne 0) {
-        throw "ERROR."
+        throw "Command finished with exit code: ${LASTEXITCODE}."
     }
     
-    Write-Information -MessageData "Runing: apt install gh."
+    Write-Information -MessageData "Runing command: apt install gh."
     $splat = @{
         FilePath = "apt"
         ArgumentList = @("install", "gh", "--yes")
@@ -50,10 +54,10 @@ try {
     }
     Start-Process @splat
     if ($LASTEXITCODE -ne 0) {
-        throw "ERROR."
+        throw "Command finished with exit code: ${LASTEXITCODE}."
     }
     
-    Write-Information -MessageData "Runing: apt config set prompt disabled."
+    Write-Information -MessageData "Runing command: apt config set prompt disabled."
     $splat = @{
         FilePath     = "gh"
         ArgumentList = @("config", "set", "prompt", "disabled")
@@ -64,11 +68,13 @@ try {
     }
     Start-Process @splat
     if ($LASTEXITCODE -ne 0) {
-        throw "ERROR."
+        throw "Command finished with exit code: ${LASTEXITCODE}."
     }
     
     Write-Information -MessageData "Checking local configuration."
-    [hashtable]$configData = Get-Content -Path $configFile -ErrorAction 'SilentlyContinue' | ConvertFrom-Json -Depth 9 -AsHashtable -ErrorAction 'SilentlyContinue'
+    [hashtable]$configData = Get-Content -Path $configFile -ErrorAction 'SilentlyContinue' |
+        ConvertFrom-Json -Depth 9 -AsHashtable -ErrorAction 'SilentlyContinue'
+
     if ($null -eq $configData) {
         [hashtable]$configData = @{}
     }
@@ -81,8 +87,8 @@ try {
     
     [bool]$successLogin = $false
     do {
-        if (-not ($configData.Git.Token)) {
-            Write-Information -MessageData "Runing: gh auth login."
+        if (-not $configData.Git.Token) {
+            Write-Information -MessageData "Runing command: gh auth login."
             $splat = @{
                 FilePath = "gh"
                 ArgumentList = @(
@@ -98,11 +104,11 @@ try {
             }
             Start-Process @splat
             if ($LASTEXITCODE -ne 0) {
-                throw "ERROR."
+                throw "Command finished with exit code: ${LASTEXITCODE}."
             }
         }
 
-        Write-Information -MessageData "Runing: gh auth status."
+        Write-Information -MessageData "Runing command: gh auth status."
         $splat = @{
             FilePath = "gh"
             ArgumentList = @("auth", "status")
@@ -116,12 +122,12 @@ try {
     }
     while (-not $successLogin)
     
-    if (Test-Path -Path $repository.Path) {
+    if (Test-Path -Path $repository.Path -PathType 'Any') {
         Write-Information -MessageData "Removing local repository."
         Remove-Item -Path $repository.Path -Recurse -Force
     }
     
-    Write-Information -MessageData "Runing: gh repo clone."
+    Write-Information -MessageData "Runing command: gh repo clone."
     $splat = @{
         FilePath     = "gh"
         ArgumentList = @(
@@ -142,12 +148,12 @@ try {
     }
     Start-Process @splat
     if ($LASTEXITCODE -ne 0) {
-        throw "ERROR."
+        throw "Command finished with exit code: ${LASTEXITCODE}."
     }
 
     foreach ($item in @("pwsh")) {
-        [IO.FIleInfo]$source = Join-Path -Path $PWD -ChildPath @($($repository.Name), "${item}.sh")
-        [IO.FIleInfo]$target = Join-Path -Path $PWD -ChildPath @($item)
+        [IO.FIleInfo]$source = Join-Path -Path $thisScript[0].Directory.Parent -ChildPath @($repository.Name, "${item}.sh")
+        [IO.FIleInfo]$target = Join-Path -Path $thisScript[0].Directory.Parent -ChildPath @($item)
     
         if (Test-Path -Path $source -PathType 'Leaf') {
             Write-Information -MessageData "Creating link for '$item'."
@@ -157,7 +163,7 @@ try {
             $splat = @{
                 FilePath     = "chmod"
                 ArgumentList = @("+x", $source.FullName)
-                Environment  = @{GH_TOKEN = $configData.Git.Token}
+                Environment  = @{}
                 NoNewWindow  = $true
                 Wait         = $true
                 ErrorAction  = 'Stop'
@@ -171,6 +177,8 @@ try {
 }
 catch {
     Write-Error -ErrorRecord $PSItem
+    Write-Error -Exception $PSItem.Excetpion
+    Write-Error -Message $PSItem.ScriptStackTrace
 }
 finally {
     Write-Information -MessageData "Completed script execution '$($thisScript[0])'."
