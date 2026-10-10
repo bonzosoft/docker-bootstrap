@@ -19,7 +19,7 @@ try {
 
     # Configuration file path --------------------------------------------------
     [IO.FileInfo]$configFile = Join-Path -Path ([IO.FileInfo]$PWD.Path) -ChildPath @(".config", "config.json")
-
+    [IO.DirectoryInfo]$ghDirectory = Join-Path -Path $configFile.Directory -ChildPath @("gh")
 
     # Repository configuration -------------------------------------------------
     [hashtable]$repository = [pscustomobject]@{}
@@ -88,20 +88,35 @@ try {
     if (-not $configData.Git.ContainsKey("Token")) {
         [string]$configData.Git.Token = ""
     }
-    
-    [bool]$successLogin = $false
+
     do {
-        if (-not $configData.Git.Token) {
+        Write-Information -MessageData "Runing command: gh auth status."
+        $splat = @{
+            FilePath = "gh"
+            ArgumentList = @("auth", "status")
+            Environment  = @{
+                GH_TOKEN      = $configData.Git.Token
+                GH_CONFIG_DIR = $ghDirectory.FullName
+            }
+            NoNewWindow  = $true
+            Wait         = $true
+            ErrorAction  = 'Stop'
+        }
+        Start-Process @splat
+        if ($LASTEXITCODE -ne 0) {
             Write-Information -MessageData "Runing command: gh auth login."
             $splat = @{
-                FilePath = "gh"
+                FilePath     = "gh"
                 ArgumentList = @(
                     "auth"
                     "login"
                     "--git-protocol", $repository.Domain.Scheme
                     "--hostname", $repository.Domain.Host
                 )
-                Environment  = @{}
+                Environment  = @{
+                    GH_TOKEN      = $configData.Git.Token
+                    GH_CONFIG_DIR = $ghDirectory.FullName
+                }
                 NoNewWindow  = $true
                 Wait         = $true
                 ErrorAction  = 'Stop'
@@ -111,20 +126,11 @@ try {
                 throw "Command finished with exit code: ${LASTEXITCODE}."
             }
         }
-
-        Write-Information -MessageData "Runing command: gh auth status."
-        $splat = @{
-            FilePath = "gh"
-            ArgumentList = @("auth", "status")
-            Environment  = @{GH_TOKEN = $configData.Git.Token}
-            NoNewWindow  = $true
-            Wait         = $true
-            ErrorAction  = 'Stop'
+        else {
+            break
         }
-        Start-Process @splat
-        $successLogin = -not $LASTEXITCODE
     }
-    while (-not $successLogin)
+    while ($true)
     
     if (Test-Path -Path $repository.Path -PathType 'Any') {
         Write-Information -MessageData "Removing local repository."
@@ -145,7 +151,10 @@ try {
             "--depth", 1
             "--recurse-submodules"
         )
-        Environment  = @{GH_TOKEN = $configData.Git.Token}
+        Environment  = @{
+            GH_TOKEN      = $configData.Git.Token
+            GH_CONFIG_DIR = $ghDirectory.FullName
+        }
         NoNewWindow  = $true
         Wait         = $true
         ErrorAction  = 'Stop'
