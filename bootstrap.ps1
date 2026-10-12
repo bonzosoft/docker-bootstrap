@@ -82,7 +82,7 @@ try {
         Wait         = $true
         PassThru     = $true
     }
-    if ($VerbosePreference -eq 'Continue') {
+    if ($VerbosePreference -ne 'Continue') {
         $splat += $disableRedirect
     }
     $splat
