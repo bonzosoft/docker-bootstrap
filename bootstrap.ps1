@@ -2,7 +2,10 @@
 
 [CmdletBinding()]
 [OutputType([void])]
-param()
+param(
+    [Parameter()]
+    [switch]$Dispose
+)
 
 try {
     # Command line setup -------------------------------------------------------
@@ -20,7 +23,6 @@ try {
     # Configuration file path --------------------------------------------------
     [IO.FileInfo]$configFile = Join-Path -Path ([IO.FileInfo]$PWD.Path) -ChildPath @(".config", "config.json")
     [IO.DirectoryInfo]$ghDirectory = Join-Path -Path $configFile.Directory -ChildPath @("gh")
-    [bool]$dispose = $false
 
     # Repository configuration -------------------------------------------------
     [hashtable]$repository = [pscustomobject]@{}
@@ -115,10 +117,9 @@ try {
                 ArgumentList = @(
                     "auth"
                     "login"
-                    "--web"
+                    "--web" # --web | --with-token
                     "--git-protocol", $repository.Domain.Scheme
                     "--hostname", $repository.Domain.Host
-                    #"--insecure-storage"
                 )
                 Environment  = @{
                     GH_PROMPT_DISABLED = $true
@@ -205,9 +206,10 @@ catch {
     Write-Error -Message $PSItem.ScriptStackTrace
 }
 finally {
-    if ($dispose) {
+    if ($Dispose.IsPresent) {
         Remove-Item -Path $ghDirectory -Recurse -Force
     }
+    
     Write-Information -MessageData "Completed script execution '$($thisScript[0])'."
     $thisScript.RemoveAt(0)
 }
