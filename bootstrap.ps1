@@ -82,7 +82,7 @@ try {
         Wait         = $true
         PassThru     = $true
     }
-    if (-not $Debug.IsPresent) {
+    if ($VerbosePreference -eq 'Continue') {
         $splat += $disableRedirect
     }
     $process = Start-Process @splat -ErrorAction 'Stop'
