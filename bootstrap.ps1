@@ -42,7 +42,7 @@ try {
     Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Branch"       -Value ([string]"main")
     Add-Member -InputObject $repository -MemberTYpe 'NoteProperty'   -Name "BasePath"     -Value ([IO.DirectoryInfo]$PWD.Path)
     Add-Member -InputObject $repository -MemberType 'ScriptProperty' -Name "Path"         -Value ([scriptblock]{
-        return [IO.DirectoryInfo](Join-Path -Path $this.Directory -ChildPath @($this.Name))
+        return [IO.DirectoryInfo](Join-Path -Path $this.BasePath -ChildPath @($this.Name))
     })
 
     # Disable stdout y stderr --------------------------------------------------
