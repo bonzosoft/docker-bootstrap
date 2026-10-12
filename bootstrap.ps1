@@ -85,6 +85,7 @@ try {
     if ($VerbosePreference -eq 'Continue') {
         $splat += $disableRedirect
     }
+    $splat
     $process = Start-Process @splat -ErrorAction 'Stop'
     if ($process.ExitCode -ne 0) {
         throw "Command finished with exit code: $($pocess.ExitCode)."
