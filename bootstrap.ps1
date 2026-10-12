@@ -207,9 +207,10 @@ catch {
 }
 finally {
     if ($Dispose.IsPresent) {
+        Write-Information -MessageData "Removing cached credentials."
         Remove-Item -Path $ghDirectory -Recurse -Force
     }
-    
+
     Write-Information -MessageData "Completed script execution '$($thisScript[0])'."
     $thisScript.RemoveAt(0)
 }
