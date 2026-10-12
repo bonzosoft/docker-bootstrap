@@ -62,7 +62,7 @@ try {
         $configData = Get-Content -Path $configFile -ErrorAction 'Stop' |
             ConvertFrom-Json -Depth 9 -AsHashtable -ErrorAction 'Stop'
     }
-    if ($configData -isnot [hahstable]) {
+    if ($configData -isnot [hashtable]) {
         [OrderedHashtable]$configData = [ordered]@{}
     }
     if ((-not $configData.ContainsKey("Git")) -or ($configData.Git -isnot [hashtable])) {
