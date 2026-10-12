@@ -85,7 +85,6 @@ try {
     if ($VerbosePreference -ne 'Continue') {
         $splat += $disableRedirect
     }
-    $splat
     $process = Start-Process @splat -ErrorAction 'Stop'
     if ($process.ExitCode -ne 0) {
         throw "Command finished with exit code: $($pocess.ExitCode)."
@@ -101,6 +100,9 @@ try {
         Wait         = $true
         PassThru     = $true
     }
+    if ($VerbosePreference -ne 'Continue') {
+        $splat += $disableRedirect
+    }
     $process = Start-Process @splat -ErrorAction 'Stop'
     if ($process.ExitCode -ne 0) {
         throw "Command finished with exit code: $($pocess.ExitCode)."
@@ -115,6 +117,9 @@ try {
         NoNewWindow  = $true
         Wait         = $true
         PassThru     = $true
+    }
+    if ($VerbosePreference -ne 'Continue') {
+        $splat += $disableRedirect
     }
     $process = Start-Process @splat -ErrorAction 'Stop'
     if ($process.ExitCode -ne 0) {
@@ -156,6 +161,9 @@ try {
                 Wait         = $true
                 PassThru     = $true
             }
+            if ($VerbosePreference -ne 'Continue') {
+                $splat += $disableRedirect
+            }
             $process = Start-Process @splat -ErrorAction 'Stop'
             if ($process.ExitCode -ne 0) {
                 throw "Command finished with exit code: $($pocess.ExitCode)."
@@ -196,6 +204,9 @@ try {
         Wait         = $true
         PassThru     = $true
     }
+    if ($VerbosePreference -ne 'Continue') {
+        $splat += $disableRedirect
+    }
     $process = Start-Process @splat -ErrorAction 'Stop'
     if ($process.ExitCode -ne 0) {
         throw "Command finished with exit code: $($pocess.ExitCode)."
@@ -220,6 +231,9 @@ try {
                 PassThru     = $true
             }
             $process = Start-Process @splat -ErrorAction 'Stop'
+            if ($VerbosePreference -ne 'Continue') {
+                $splat += $disableRedirect
+            }
             if ($process.ExitCode -ne 0) {
                 throw "Command finished with exit code: $($pocess.ExitCode)."
             }
