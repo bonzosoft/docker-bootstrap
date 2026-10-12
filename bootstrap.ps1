@@ -47,8 +47,10 @@ try {
 
     # Disable stdout y stderr --------------------------------------------------
     [hashtable]$disableRedirect = @{
-        RedirectStandardOutput = if ($IsWindows) { 'NUL' } else { '/dev/null' }
-        RedirectStandardError  = if ($IsWindows) { 'NUL' } else { '/dev/null' }
+        RedirectStandardOutput = Variable:tmp1
+        RedirectStandardError = Variable:tmp2
+        #RedirectStandardOutput = if ($IsWindows) { 'NUL' } else { '/dev/null' }
+        #RedirectStandardError  = if ($IsWindows) { 'NUL' } else { '/dev/null' }
     }
     
 
