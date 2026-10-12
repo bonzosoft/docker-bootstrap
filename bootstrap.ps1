@@ -47,8 +47,8 @@ try {
 
     # Disable stdout y stderr --------------------------------------------------
     [hashtable]$disableRedirect = @{
-        RedirectStandardOutput = if ($IsWindows) { 'NUL' } else { '/dev/null' }
-        #RedirectStandardError  = if ($IsWindows) { 'NUL' } else { '/dev/null' }
+        RedirectStandardOutput = [System.IO.Path]::GetTempFileName()
+        RedirectStandardError  = [System.IO.Path]::GetTempFileName()
     }
     
 
