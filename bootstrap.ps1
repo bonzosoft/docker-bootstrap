@@ -1,5 +1,10 @@
 #!/usr/bin/env pwsh
 
+
+#using namespace System.Collections.Generic   # List[T]
+using namespace System.Management.Automation # OrderedHashtable
+
+
 [CmdletBinding()]
 [OutputType([void])]
 param(
@@ -20,22 +25,53 @@ try {
     Write-Information -MessageData "Loading script '$($thisScript[0])'."
 
 
+    # Script-wide Variables ----------------------------------------------------
+    [hashtable]$splat = @{}
+
+
     # Configuration file path --------------------------------------------------
-    [IO.FileInfo]$configFile = Join-Path -Path ([IO.FileInfo]$PWD.Path) -ChildPath @(".config", "config.json")
+    [IO.FileInfo]$configFile = Join-Path -Path ([IO.DirectoryInfo]$PWD.Path) -ChildPath @(".config", "config.json")
     [IO.DirectoryInfo]$ghDirectory = Join-Path -Path $configFile.Directory -ChildPath @("gh")
+    
 
     # Repository configuration -------------------------------------------------
-    [hashtable]$repository = [pscustomobject]@{}
-    $repository | Add-Member -MemberType 'NoteProperty'   -Name "Domain"       -Value ([uri]"https://github.com")
-    $repository | Add-Member -MemberType 'NoteProperty'   -Name "Organization" -Value "bonzosoft"
-    $repository | Add-Member -MemberType 'NoteProperty'   -Name "Name"         -Value "docker-deploy"
-    $repository | Add-Member -MemberType 'NoteProperty'   -Name "Branch"       -Value "main"
-    $repository | Add-Member -MemberTYpe 'NoteProperty'   -Name "Directory"    -Value ([IO.DirectoryInfo]$PWD.Path)
-    $repository | Add-Member -MemberType 'ScriptProperty' -Name "Path"         -Value ([scriptblock]{
-        return [IO.FileInfo](Join-Path -Path $this.Directory -ChildPath @($this.Name))
+    [pscustomobject]$repository = [pscustomobject]@{}
+    Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Domain"       -Value ([uri]"https://github.com")
+    Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Organization" -Value ([string]"bonzosoft")
+    Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Name"         -Value ([string]"docker-deploy")
+    Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Branch"       -Value ([string]"main")
+    Add-Member -InputObject $repository -MemberTYpe 'NoteProperty'   -Name "BasePath"     -Value ([IO.DirectoryInfo]$PWD.Path)
+    Add-Member -InputObject $repository -MemberType 'ScriptProperty' -Name "Path"         -Value ([scriptblock]{
+        return [IO.DirectoryInfo](Join-Path -Path $this.Directory -ChildPath @($this.Name))
     })
 
-    # Script -------------------------------------------------------------------
+    # Disable stdout y stderr --------------------------------------------------
+    [hashtable]$disableRedirect = @{
+        RedirectStandardOutput = if ($IsWindows) { 'NUL' } else { '/dev/null' }
+        RedirectStandardError  = if ($IsWindows) { 'NUL' } else { '/dev/null' }
+    }
+    
+
+    #Region - Main logic -------------------------------------------------------
+    Write-Information -MessageData "Loading local configuration."
+    [OrderedHashtable]$configData = [ordered]@{}
+    
+    $configFile.Refresh()
+    if ($configFile.Length -ne 0) {
+        $configData = Get-Content -Path $configFile -ErrorAction 'Stop' |
+            ConvertFrom-Json -Depth 9 -AsHashtable -ErrorAction 'Stop'
+    }
+    if ($configData -isnot [hahstable]) {
+        [OrderedHashtable]$configData = [ordered]@{}
+    }
+    if ((-not $configData.ContainsKey("Git")) -or ($configData.Git -isnot [hashtable])) {
+        [OrderedHashtable]$configData.Git = [ordered]@{}
+    }
+    if (-not $configData.Git.ContainsKey("Token")) {
+        [string]$configData.Git.Token = ""
+    }
+
+
     Write-Information -MessageData "Runing command: apt update."
     $splat = @{
         FilePath     = "apt"
@@ -44,13 +80,16 @@ try {
         NoNewWindow  = $true
         Wait         = $true
         PassThru     = $true
-        ErrorAction  = 'Stop'
     }
-    $process = Start-Process @splat
+    if (-not $Debug.IsPresent) {
+        $splat += $disableRedirect
+    }
+    $process = Start-Process @splat -ErrorAction 'Stop'
     if ($process.ExitCode -ne 0) {
         throw "Command finished with exit code: $($pocess.ExitCode)."
     }
     
+
     Write-Information -MessageData "Runing command: apt install gh."
     $splat = @{
         FilePath = "apt"
@@ -59,13 +98,13 @@ try {
         NoNewWindow  = $true
         Wait         = $true
         PassThru     = $true
-        ErrorAction  = 'Stop'
     }
-    $process = Start-Process @splat
+    $process = Start-Process @splat -ErrorAction 'Stop'
     if ($process.ExitCode -ne 0) {
         throw "Command finished with exit code: $($pocess.ExitCode)."
     }
     
+
     Write-Information -MessageData "Runing command: apt config set prompt disabled."
     $splat = @{
         FilePath     = "gh"
@@ -74,26 +113,12 @@ try {
         NoNewWindow  = $true
         Wait         = $true
         PassThru     = $true
-        ErrorAction  = 'Stop'
     }
-    $process = Start-Process @splat
+    $process = Start-Process @splat -ErrorAction 'Stop'
     if ($process.ExitCode -ne 0) {
         throw "Command finished with exit code: $($pocess.ExitCode)."
     }
-    
-    Write-Information -MessageData "Checking local configuration."
-    [hashtable]$configData = Get-Content -Path $configFile -ErrorAction 'SilentlyContinue' |
-        ConvertFrom-Json -Depth 9 -AsHashtable -ErrorAction 'SilentlyContinue'
 
-    if ($null -eq $configData) {
-        [hashtable]$configData = @{}
-    }
-    if (-not $configData.ContainsKey("Git")) {
-        [hashtable]$configData.Git = @{}
-    }
-    if (-not $configData.Git.ContainsKey("Token")) {
-        [string]$configData.Git.Token = ""
-    }
 
     do {
         Write-Information -MessageData "Runing command: gh auth status."
@@ -107,9 +132,8 @@ try {
             NoNewWindow  = $true
             Wait         = $true
             PassThru     = $true
-            ErrorAction  = 'Stop'
         }
-        $process = Start-Process @splat
+        $process = Start-Process @splat -ErrorAction 'Stop'
         if ($process.ExitCode -ne 0) {
             Write-Information -MessageData "Runing command: gh auth login."
             $splat = @{
@@ -129,9 +153,8 @@ try {
                 NoNewWindow  = $true
                 Wait         = $true
                 PassThru     = $true
-                ErrorAction  = 'Stop'
             }
-            $process = Start-Process @splat
+            $process = Start-Process @splat -ErrorAction 'Stop'
             if ($process.ExitCode -ne 0) {
                 throw "Command finished with exit code: $($pocess.ExitCode)."
             }
@@ -142,11 +165,13 @@ try {
     }
     while ($true)
     
+
     if (Test-Path -Path $repository.Path -PathType 'Any') {
         Write-Information -MessageData "Removing local repository."
         Remove-Item -Path $repository.Path -Recurse -Force
     }
     
+
     Write-Information -MessageData "Runing command: gh repo clone."
     $splat = @{
         FilePath     = "gh"
@@ -168,12 +193,12 @@ try {
         NoNewWindow  = $true
         Wait         = $true
         PassThru     = $true
-        ErrorAction  = 'Stop'
     }
-    $process = Start-Process @splat
+    $process = Start-Process @splat -ErrorAction 'Stop'
     if ($process.ExitCode -ne 0) {
         throw "Command finished with exit code: $($pocess.ExitCode)."
     }
+
 
     foreach ($item in @("pwsh")) {
         [IO.FIleInfo]$source = Join-Path -Path ([IO.FileInfo]$PWD.Path) -ChildPath @($repository.Name, "${item}.sh")
@@ -191,14 +216,14 @@ try {
                 NoNewWindow  = $true
                 Wait         = $true
                 PassThru     = $true
-                ErrorAction  = 'Stop'
             }
-            $process = Start-Process @splat
+            $process = Start-Process @splat -ErrorAction 'Stop'
             if ($process.ExitCode -ne 0) {
                 throw "Command finished with exit code: $($pocess.ExitCode)."
             }
         }
     }
+    #Endregion
 }
 catch {
     Write-Error -ErrorRecord $PSItem
@@ -211,6 +236,7 @@ finally {
         Remove-Item -Path $ghDirectory -Recurse -Force
     }
 
+    # Script end ---------------------------------------------------------------
     Write-Information -MessageData "Completed script execution '$($thisScript[0])'."
     $thisScript.RemoveAt(0)
 }
