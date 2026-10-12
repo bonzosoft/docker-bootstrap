@@ -57,7 +57,8 @@ try {
     [OrderedHashtable]$configData = [ordered]@{}
     
     $configFile.Refresh()
-    if ($configFile.Length -ne 0) {
+    $configFile.Directory.Create()
+    if ($configFile.Exists -and ($configFile.Length -ne 0)) {
         $configData = Get-Content -Path $configFile -ErrorAction 'Stop' |
             ConvertFrom-Json -Depth 9 -AsHashtable -ErrorAction 'Stop'
     }
