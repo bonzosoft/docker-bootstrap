@@ -161,9 +161,6 @@ try {
                 Wait         = $true
                 PassThru     = $true
             }
-            if ($VerbosePreference -ne 'Continue') {
-                $splat += $disableRedirect
-            }
             $process = Start-Process @splat -ErrorAction 'Stop'
             if ($process.ExitCode -ne 0) {
                 throw "Command finished with exit code: $($pocess.ExitCode)."
