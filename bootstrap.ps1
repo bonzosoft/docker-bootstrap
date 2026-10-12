@@ -4,7 +4,7 @@
 [OutputType([void])]
 param(
     [Parameter()]
-    [switch]$Dispose
+    [switch]$KeepCredential
 )
 
 try {
@@ -206,7 +206,7 @@ catch {
     Write-Error -Message $PSItem.ScriptStackTrace
 }
 finally {
-    if ($Dispose.IsPresent) {
+    if (-not $KeepCredential.IsPresent) {
         Write-Information -MessageData "Removing cached credentials."
         Remove-Item -Path $ghDirectory -Recurse -Force
     }
