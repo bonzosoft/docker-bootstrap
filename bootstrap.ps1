@@ -2,7 +2,7 @@
 
 
 #using namespace System.Collections.Generic   # List[T]
-using namespace System.Management.Automation # OrderedHashtable
+using namespace System.Management.Automation # OrderedHashtable, PSCredential
 
 
 [CmdletBinding()]
@@ -14,6 +14,7 @@ param(
 
 try {
     # Command line setup -------------------------------------------------------
+    Clear-Host
     Set-StrictMode -Version 'Latest'
     $ErrorActionPreference = 'Stop'
     $InformationPreference = 'Continue'
@@ -25,45 +26,72 @@ try {
     Write-Information -MessageData "Loading script '$($thisScript[0])'."
 
 
-    # Script-wide Variables ----------------------------------------------------
+    # Script-wide variables ----------------------------------------------------
     [hashtable]$splat = @{}
 
 
     # Configuration file path --------------------------------------------------
     [IO.FileInfo]$configFile = Join-Path -Path ([IO.DirectoryInfo]$PWD.Path) -ChildPath @(".config", "config.json")
-    [IO.DirectoryInfo]$ghDirectory = Join-Path -Path $configFile.Directory -ChildPath @("gh")
-    
+
+
+    # Vault configuration ------------------------------------------------------
+    [pscustomobject]$vaultSplat = [pscustomobject]@{}
+    Add-Member -InputObject $vaultSplat -MemberType 'NoteProperty' -Name "Credential"   -Value $null
+    Add-Member -InputObject $vaultSplat -MemberType 'NoteProperty' -Name "Domain"       -Value ([uri]"https://eu.infisical.com")
+    Add-Member -InputObject $vaultSplat -MemberType 'NoteProperty' -Name "Organization" -Value ([guid]"8008422a-830a-4a7c-8472-ab56f0172560")
+    Add-Member -InputObject $vaultSplat -MemberType 'NoteProperty' -Name "Project"      -Value ([guid]"8a484bc8-4a18-468e-842c-7a264394781e")
+    Add-Member -InputObject $vaultSplat -MemberType 'NoteProperty' -Name "Environment"  -Value ([string]"dev")
+    Add-Member -InputObject $vaultSplat -MemberType 'NoteProperty' -Name "Token"        -Value $null
+
 
     # Repository configuration -------------------------------------------------
-    [pscustomobject]$repository = [pscustomobject]@{}
-    Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Domain"       -Value ([uri]"https://github.com")
-    Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Organization" -Value ([string]"bonzosoft")
-    Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Name"         -Value ([string]"docker-deploy")
-    Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Branch"       -Value ([string]"main")
-    Add-Member -InputObject $repository -MemberTYpe 'NoteProperty'   -Name "BasePath"     -Value ([IO.DirectoryInfo]$PWD.Path)
-    Add-Member -InputObject $repository -MemberType 'ScriptProperty' -Name "Path"         -Value ([scriptblock]{
+    [pscustomobject]$repositorySplat = [pscustomobject]@{}
+    Add-Member -InputObject $repositorySplat -MemberType 'NoteProperty'   -Name "Domain"       -Value ([uri]"https://github.com")
+    Add-Member -InputObject $repositorySplat -MemberType 'NoteProperty'   -Name "Organization" -Value ([string]"bonzosoft")
+    Add-Member -InputObject $repositorySplat -MemberType 'NoteProperty'   -Name "Name"         -Value ([string]"docker-deploy")
+    Add-Member -InputObject $repositorySplat -MemberType 'NoteProperty'   -Name "Branch"       -Value ([string]"main")
+    Add-Member -InputObject $repositorySplat -MemberTYpe 'NoteProperty'   -Name "BasePath"     -Value ([IO.DirectoryInfo]$PWD.Path)
+    Add-Member -InputObject $repositorySplat -MemberType 'ScriptProperty' -Name "Path"         -Value ([scriptblock]{
         return [IO.DirectoryInfo](Join-Path -Path $this.BasePath -ChildPath @($this.Name))
     })
 
-    # Disable stdout y stderr --------------------------------------------------
+
+    # Disable stdout y stderr display for native commands ----------------------
     [hashtable]$disableRedirect = @{
         RedirectStandardOutput = [System.IO.Path]::GetTempFileName()
         RedirectStandardError  = [System.IO.Path]::GetTempFileName()
     }
     
 
-    #Region - Main logic -------------------------------------------------------
+    #Region - Main -------------------------------------------------------------
+
+
+    # Configuration validation -------------------------------------------------
     Write-Information -MessageData "Loading local configuration."
     [OrderedHashtable]$configData = [ordered]@{}
     
     $configFile.Refresh()
-    $configFile.Directory.Create()
-    if ($configFile.Exists -and ($configFile.Length -ne 0)) {
-        $configData = Get-Content -Path $configFile -ErrorAction 'Stop' |
-            ConvertFrom-Json -Depth 9 -AsHashtable -ErrorAction 'Stop'
+    if (-not $configFile.Directory.Exists) {
+        $configFile.Directory.Create()
+    }
+    if (-not $configFile.Exists) {
+        $configFile.Create().Dispose()
+    }
+    if ($configFile.Length -ne 0) {
+        $configData = Get-Content -Path $configFile -ErrorAction 'SilentlyContinue' |
+            ConvertFrom-Json -Depth 9 -AsHashtable -ErrorAction 'SilentlyContinue'
     }
     if ($configData -isnot [hashtable]) {
         [OrderedHashtable]$configData = [ordered]@{}
+    }
+    if ((-not $configData.ContainsKey("Vault")) -or ($configData.Vault -isnot [hashtable])) {
+        [OrderedHashtable]$configData.Vault = [ordered]@{}
+    }
+    if ((-not $configData.ContainsKey("ClientId"))) {
+        [string]$configData.Vault.ClientId = "user"
+    }
+    if ((-not $configData.ContainsKey("ClientSecret"))) {
+        [securestring]$configData.Vault.ClientSecret = ("pass" | ConvertTo-SecureString -AsPlainText)
     }
     if ((-not $configData.ContainsKey("Git")) -or ($configData.Git -isnot [hashtable])) {
         [OrderedHashtable]$configData.Git = [ordered]@{}
@@ -71,6 +99,51 @@ try {
     if (-not $configData.Git.ContainsKey("Token")) {
         [string]$configData.Git.Token = ""
     }
+
+    if (-not ([string]::IsNullOrWhiteSpace($configData.Vault.ClientId) -and [string]::IsNullOrWhiteSpace($configData.Vault.ClientSecret))) {
+        $splat = @{
+            TypeName = "System.Management.Automation.PSCredential"
+            ArgumentList = @(
+                $configData.Vault.ClientId
+                ($configData.Vault.ClientSecret | ConvertTo-SecureString -AsPlainText)
+            )
+        }
+        $vaultSplat.Credential = New-Object @splat -ErrorAction 'Stop'
+
+        $splat = @{
+            FilePath     = "infisical"
+            ArgumentList = @(
+                "login"
+                "--domain",        $vaultSplat.Domain.AbsoluteUri
+                "--method=universal-auth"
+                "--client-id",     $vaultSplat.Credential.GetNetworkCredential().UserName
+               #"--client-secret", $vaultSplat.Credential.GetNetworkCredential().Password
+                "--telemetry=false"
+                "--plain"
+                "--silent"
+            )
+            Environment  = @{
+                INFISICAL_DISABLE_UPDATE_CHECK         = $true
+                INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET = $vaultSplat.Credential.GetNetworkCredential().Password
+            }
+            NoNewWindow  = $true
+            Wait         = $true
+            PassThru     = $true
+        }
+        $processResult = Start-Process @splat -ErrorAction 'Stop'
+        if ($processResult.ExitCode -ne 0) {
+            throw "Command finished with exit code: $($pocess.ExitCode)."
+        }
+
+        Write-Host "habemus token"
+
+
+    }
+
+    
+return
+
+
 
 
     Write-Information -MessageData "Runing command: apt update."
@@ -109,7 +182,7 @@ try {
     }
     
 
-    Write-Information -MessageData "Runing command: apt config set prompt disabled."
+    Write-Information -MessageData "Runing command: gh config set prompt disabled."
     $splat = @{
         FilePath     = "gh"
         ArgumentList = @("config", "set", "prompt", "disabled")
@@ -242,15 +315,16 @@ try {
     #Endregion
 }
 catch {
-    Write-Error -ErrorRecord $PSItem
-    Write-Error -Exception $PSItem.Exception
-    Write-Error -Message $PSItem.ScriptStackTrace
+    Write-Error -ErrorRecord $PSItem -ErrorAction 'Continue'
+    Write-Error -Exception $PSItem.Exception -ErrorAction 'Continue'
+    Write-Error -Message $PSItem.ScriptStackTrace -ErrorAction 'Continue'
+    return
 }
 finally {
-    if (-not $KeepCredential.IsPresent) {
-        Write-Information -MessageData "Removing cached credentials."
-        Remove-Item -Path $ghDirectory -Recurse -Force
-    }
+    #if (-not $KeepCredential.IsPresent) {
+    #    Write-Information -MessageData "Removing cached credentials."
+    #    Remove-Item -Path $ghDirectory -Recurse -Force
+    #}
 
     # Script end ---------------------------------------------------------------
     Write-Information -MessageData "Completed script execution '$($thisScript[0])'."
