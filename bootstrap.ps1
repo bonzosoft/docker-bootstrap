@@ -174,25 +174,19 @@ try {
 
 
             if ($null -ne $repositorySplat.Token) {
-                $splat = @{
-                    FilePath      = "git"
-                    ArgumentList  = @(
-                        "-c", "credential.helper=cache"
-                        "-c", "credential.interactive=false"
-                        "credential"
-                        "approve"
-                    )
-                    StandardInput = @(
+                @(
                         ("protocol=" + $repositorySplat.Domain.Scheme)
                         ("host=" + $repositorySplat.Domain.Authority)
                         ("username=" + "x-access-token")
                         ("password=" + ($repositorySplat.Token | ConvertFrom-SecureString -AsPlainText))
-                    )
-                    Environment   = @{}
-                }
-                $processOutput = Start-Process @splat -ErrorAction 'Stop'
-                if ($processOutput.ExitCode -ne 0) {
-                    throw "Command finished with exit code: $($processOutput.ExitCode)."
+                    ) |
+                    git `
+                        -c credential.helper=cache `
+                        -c credential.interactive=false `
+                        credential `
+                        approve
+                if ($LASTEXITCODE -ne 0) {
+                    throw "Command finished with exit code: $LASTEXITCODE."
                 }
                 
                 Write-host "login es valido"
