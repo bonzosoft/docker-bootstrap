@@ -56,13 +56,13 @@ try {
         return [IO.DirectoryInfo](Join-Path -Path $this.BasePath -ChildPath @($this.Name))
     })
     Add-Member -InputObject $repositorySplat -MemberType 'ScriptProperty' -Name "Uri"          -Value ([scriptblock]{
-        return [uri]::TryCreate($this.Domain, $this.Organization, ($this.Name + "/.git"))
+        return [uri]::new($this.Domain, $this.Organization, ($this.Name + "/.git"))
     })
 
     Write-host "uri:"
     $repositorySplat.Uri
 
-    [uri]::TryCreate($repositorySplat.Domain, @($repositorySplat.Organization, ($repositorySplat.Name + "/.git")))
+    [uri]::new($repositorySplat.Domain, @($repositorySplat.Organization, ($repositorySplat.Name + "/.git")))
 
 return
     # Disable stdout y stderr display for native commands ----------------------
