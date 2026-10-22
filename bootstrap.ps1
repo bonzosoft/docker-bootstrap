@@ -83,8 +83,8 @@ try {
     }
 
     $configData
-    $configData.Vault.ClientId
-    $configData.Vault.ClientSecret
+    $configData.Vault.UserName
+    $configData.Vault.Password
 
     if ($configData -isnot [hashtable]) {
         [OrderedHashtable]$configData = [ordered]@{}
@@ -92,14 +92,14 @@ try {
     if ((-not $configData.ContainsKey("Vault")) -or ($configData.Vault -isnot [hashtable])) {
         [OrderedHashtable]$configData.Vault = [ordered]@{}
     }
-    if ((-not $configData.Vault.ContainsKey("ClientId"))) {
-        [string]$configData.Vault.ClientId = ""
+    if ((-not $configData.Vault.ContainsKey("UserName"))) {
+        [string]$configData.Vault.UserName = ""
     }
-    if ((-not $configData.Vault.ContainsKey("ClientSecret"))) {
-        [securestring]$configData.Vault.ClientSecret = $null
+    if ((-not $configData.Vault.ContainsKey("Password"))) {
+        [securestring]$configData.Vault.Password = $null
     }
     else {
-        [securestring]($configData.Vault.ClientSecret | ConvertTo-SecureString -AsPlainText)
+        [securestring]($configData.Vault.Password | ConvertTo-SecureString -AsPlainText)
     }
     if ((-not $configData.ContainsKey("Git")) -or ($configData.Git -isnot [hashtable])) {
         [OrderedHashtable]$configData.Git = [ordered]@{}
@@ -108,15 +108,15 @@ try {
         [string]$configData.Git.Token = ""
     }
 
-    write-host "credenciales leidas: $($configData.Vault.ClientId)`n$($configData.Vault.ClientSecret)"
+    write-host "credenciales leidas: $($configData.Vault.UserName)`n$($configData.Vault.Password)"
  return
     do {
-        if (-not ([string]::IsNullOrWhiteSpace($configData.Vault.ClientId) -and [string]::IsNullOrWhiteSpace($configData.Vault.ClientSecret))) {
+        if (-not ([string]::IsNullOrWhiteSpace($configData.Vault.UserName) -and [string]::IsNullOrWhiteSpace($configData.Vault.Password))) {
             $splat = @{
                 TypeName = "System.Management.Automation.PSCredential"
                 ArgumentList = @(
-                    $configData.Vault.ClientId
-                    ($configData.Vault.ClientSecret | ConvertTo-SecureString -AsPlainText)
+                    $configData.Vault.UserName
+                    ($configData.Vault.Password | ConvertTo-SecureString -AsPlainText)
                 )
             }
             $vaultSplat.Credential = New-Object @splat -ErrorAction 'Stop'
