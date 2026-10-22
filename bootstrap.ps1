@@ -124,14 +124,15 @@ try {
             New-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -Value $true | Out-Null
             New-Item -Path "Env:\INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" -Value $vaultSplat.Credential.GetNetworkCredential().Password | Out-Null
             try {
-                [string]$output = & infisical login `
+                $vaultSplat.Token = ConvertTo-SecureString -String (
+                    & infisical login `
                     --domain $vaultSplat.Domain.AbsoluteUri `
                     --method=universal-auth `
                     --client-id $vaultSplat.Credential.GetNetworkCredential().UserName `
                     --telemetry=false `
                     --plain `
                     --silent
-                    #"--client-secret $vaultSplat.Credential.GetNetworkCredential().Password `
+                ) -AsPlainText
             }
             finally {
                 Remove-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -ErrorAction 'SilentlyContinue'
@@ -139,9 +140,6 @@ try {
             }
             if ($LASTEXITCODE -ne 0) {
                 throw "Command finished with exit code: $LASTEXITCODE."
-            }
-            if (-not [string]::IsNullOrWhiteSpace($output)) {
-                $vaultSplat.Token = ConvertTo-SecureString -String $output -AsPlainText
             }
             
             <#
