@@ -176,7 +176,7 @@ try {
 
             Write-Host "habemus token"
             Write-Host "token:"
-            $vaultSplat.Token | ConvertFrom-SecureString -AsPlainText -Force
+            $vaultSplat.Token | ConvertFrom-SecureString -AsPlainText
             
         }
     #} while ($true)
