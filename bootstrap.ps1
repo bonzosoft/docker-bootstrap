@@ -59,7 +59,7 @@ try {
         return [uri]::new($this.Domain, @($this.Organization.AbsoluteUri, $this.Name, ".git") -join "/")
     })
 
-    
+
     # Disable stdout y stderr display for native commands ----------------------
     [hashtable]$disableRedirect = @{
         RedirectStandardOutput = [System.IO.Path]::GetTempFileName()
@@ -192,9 +192,9 @@ try {
                 }
             }
 
-            if (Test-Path -Path $repository.Path -PathType 'Any') {
+            if (Test-Path -Path $repositorySplat.Path -PathType 'Any') {
                 Write-Information -MessageData "Removing local repository."
-                Remove-Item -Path $repository.Path -Recurse -Force
+                Remove-Item -Path $repositorySplat.Path -Recurse -Force
             }
 
             git `
