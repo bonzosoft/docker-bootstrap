@@ -82,10 +82,6 @@ try {
             ConvertFrom-Json -Depth 9 -AsHashtable -ErrorAction 'SilentlyContinue'
     }
 
-    $configData
-    $configData.Vault.UserName
-    $configData.Vault.Password
-
     if ($configData -isnot [hashtable]) {
         [OrderedHashtable]$configData = [ordered]@{}
     }
@@ -109,8 +105,8 @@ try {
     }
 
     write-host "credenciales leidas: $($configData.Vault.UserName)`n$($configData.Vault.Password)"
- return
-    do {
+
+    #do {
         if (-not ([string]::IsNullOrWhiteSpace($configData.Vault.UserName) -and [string]::IsNullOrWhiteSpace($configData.Vault.Password))) {
             $splat = @{
                 TypeName = "System.Management.Automation.PSCredential"
@@ -148,8 +144,8 @@ try {
     
             Write-Host "habemus token"
         }
-    } while ($true)
- 
+    #} while ($true)
+        $processResult
 
     
 return
