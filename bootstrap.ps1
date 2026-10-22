@@ -62,7 +62,7 @@ try {
     Write-host "uri:"
     $repositorySplat.Uri
 
-    [uri]::TryCreate($repositorySplat.Domain, $repositorySplat.Organization, ($repositorySplat.Name + "/.git"))
+    [uri]::TryCreate($repositorySplat.Domain, @($repositorySplat.Organization, ($repositorySplat.Name + "/.git")))
 
 return
     # Disable stdout y stderr display for native commands ----------------------
