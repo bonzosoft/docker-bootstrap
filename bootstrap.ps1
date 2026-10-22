@@ -81,6 +81,9 @@ try {
         $configData = Get-Content -Path $configFile -ErrorAction 'SilentlyContinue' |
             ConvertFrom-Json -Depth 9 -AsHashtable -ErrorAction 'SilentlyContinue'
     }
+
+    $configData
+    
     if ($configData -isnot [hashtable]) {
         [OrderedHashtable]$configData = [ordered]@{}
     }
@@ -106,7 +109,7 @@ try {
     }
 
     write-host "credenciales leidas: $($configData.Vault.ClientId)`n$($configData.Vault.ClientSecret)"
-
+ return
     do {
         if (-not ([string]::IsNullOrWhiteSpace($configData.Vault.ClientId) -and [string]::IsNullOrWhiteSpace($configData.Vault.ClientSecret))) {
             $splat = @{
