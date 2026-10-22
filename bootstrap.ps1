@@ -56,16 +56,9 @@ try {
         return [IO.DirectoryInfo](Join-Path -Path $this.BasePath -ChildPath @($this.Name))
     })
     Add-Member -InputObject $repositorySplat -MemberType 'ScriptProperty' -Name "Uri"          -Value ([scriptblock]{
-        return [uri]::new($this.Domain.AbsoluteUri, @($this.Organization, $this.Name) -join "/")
+        return [uri]::new($this.Domain, @($this.Organization, $this.Name) -join "/")
     })
-
-
-    # Disable stdout y stderr display for native commands ----------------------
-    [hashtable]$disableRedirect = @{
-        RedirectStandardOutput = [System.IO.Path]::GetTempFileName()
-        RedirectStandardError  = [System.IO.Path]::GetTempFileName()
-    }
-    
+   
 
     #Region - Main -------------------------------------------------------------
 
@@ -111,9 +104,6 @@ try {
     write-host "credenciales leidas: $($configData.Vault.UserName)`n$($configData.Vault.Password)"
 
     #do {
-
-
-
 
         if (-not ([string]::IsNullOrWhiteSpace($configData.Vault.UserName) -and [string]::IsNullOrWhiteSpace($configData.Vault.Password))) {
             $splat = @{
