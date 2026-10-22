@@ -108,9 +108,7 @@ try {
     write-host "credenciales leidas: $($configData.Vault.UserName)`n$($configData.Vault.Password)"
 
     #do {
-        if ($configData.Git.Token.Length -gt 0) {
-            git
-        }
+
 
 
 
@@ -144,7 +142,6 @@ try {
 
                 Write-Host "infisical token:"
                 $vaultSplat.Token | ConvertFrom-SecureString -AsPlainText
-                ConvertFrom-SecureString -SecureString $vaultSplat.Token -AsPlainText
             }
             finally {
                 Remove-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -ErrorAction 'SilentlyContinue'
@@ -176,6 +173,30 @@ try {
             }
 
 
+            if ($null -ne $repositorySplat.Token) {
+                @splat = @{
+                    FilePath      = "git"
+                    ArgumentList  = @(
+                        "-c", "credential.helper=cache"
+                        "-c", "credential.interactive=false"
+                        "credential"
+                        "approve"
+                    )
+                    StandardInput = @(
+                        ("protocol=" + $repositorySplat.Domain.Scheme)
+                        ("host=" + $repositorySplat.Domain.Authority)
+                        ("username=" + "x-access-token")
+                        ("password=" + ($repositorySplat.Token | ConvertFrom-SecureString -AsPlainText))
+                    )
+                    Environment   = @{}
+                }
+                $processOutput = Start-Process @splat -ErrorAction 'Stop'
+                if ($processOutput.ExitCode -ne 0) {
+                    throw "Command finished with exit code: $($processOutput.ExitCode)."
+                }
+                
+                Write-host "login es valido"
+            }
 
             
         }
