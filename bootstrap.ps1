@@ -59,6 +59,7 @@ try {
         return [uri]::TryParse($this.Domain, $this.Organization, ($this.Name + "/.git"))
     })
 
+    Write-host "uri:"
     $repositorySplat.Uri
 
 return
