@@ -92,8 +92,11 @@ try {
         #[string]$configData.Vault.ClientId = "user"
     }
     if ((-not $configData.ContainsKey("ClientSecret"))) {
-        [securestring]$configData.Vault.ClientSecret = ""
+        [securestring]$configData.Vault.ClientSecret = $null
         #[securestring]$configData.Vault.ClientSecret = ("pass" | ConvertTo-SecureString -AsPlainText)
+    }
+    else {
+        [securestring]($configData.Vault.ClientSecret | ConvertTo-SecureString -AsPlainText)
     }
     if ((-not $configData.ContainsKey("Git")) -or ($configData.Git -isnot [hashtable])) {
         [OrderedHashtable]$configData.Git = [ordered]@{}
