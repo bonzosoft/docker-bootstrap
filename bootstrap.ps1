@@ -55,8 +55,13 @@ try {
     Add-Member -InputObject $repositorySplat -MemberType 'ScriptProperty' -Name "Path"         -Value ([scriptblock]{
         return [IO.DirectoryInfo](Join-Path -Path $this.BasePath -ChildPath @($this.Name))
     })
+    Add-Member -InputObject $repositorySplat -MemberType 'ScriptProperty' -Name "Uri"          -Value ([sriptblock]{
+        return [uri]::TryParse($this.Domain, $this.Organization, ($this.Name + "/.git"))
+    })
 
+    $repositorySplat.Uri
 
+return
     # Disable stdout y stderr display for native commands ----------------------
     [hashtable]$disableRedirect = @{
         RedirectStandardOutput = [System.IO.Path]::GetTempFileName()
@@ -172,7 +177,6 @@ try {
                 Remove-Item -Path "Env:\INFISICAL_TOKEN" -ErrorAction 'SilentlyContinue'
             }
 
-
             if ($null -ne $repositorySplat.Token) {
                 @(
                         ("protocol=" + $repositorySplat.Domain.Scheme)
@@ -188,10 +192,22 @@ try {
                 if ($LASTEXITCODE -ne 0) {
                     throw "Command finished with exit code: $LASTEXITCODE."
                 }
-                
-                Write-host "login es valido"
             }
 
+            if (Test-Path -Path $repository.Path -PathType 'Any') {
+                Write-Information -MessageData "Removing local repository."
+                Remove-Item -Path $repository.Path -Recurse -Force
+            }
+
+            git `
+                -c credential.helper=cache `
+                -c credential.interactive=false `
+                clone `
+                --branch $repositorySplat.Branch `
+                --depth 1 `
+                --recurse-submodules `
+                --shallow-submodules `
+                $repositorySplat.Uri.AbsoluteUri
             
         }
     #} while ($true)
