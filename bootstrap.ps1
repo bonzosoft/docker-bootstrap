@@ -144,7 +144,7 @@ try {
                 throw "Command finished with exit code: $LASTEXITCODE."
             }
             if (-not [string]::IsNullOrWhiteSpace($output)) {
-                $vaultSplat.Token = ($output | ConvertTo-SecureString -AsPlainText)
+                $vaultSplat.Token = ConvertTo-SecureString -String $output -AsPlainText
             }
             
             <#
@@ -177,6 +177,7 @@ try {
             Write-Host "habemus token"
             Write-Host "token:"
             $vaultSplat.Token | ConvertFrom-SecureString -AsPlainText
+            ConvertFrom-SecureString -SecureString $vaultSplat.Token -AsPlainText
             
         }
     #} while ($true)
