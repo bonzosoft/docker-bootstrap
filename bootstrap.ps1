@@ -92,13 +92,11 @@ try {
     if ((-not $configData.ContainsKey("Vault")) -or ($configData.Vault -isnot [hashtable])) {
         [OrderedHashtable]$configData.Vault = [ordered]@{}
     }
-    if ((-not $configData.ContainsKey("ClientId"))) {
+    if ((-not $configData.Vault.ContainsKey("ClientId"))) {
         [string]$configData.Vault.ClientId = ""
-        #[string]$configData.Vault.ClientId = "user"
     }
-    if ((-not $configData.ContainsKey("ClientSecret"))) {
+    if ((-not $configData.Vault.ContainsKey("ClientSecret"))) {
         [securestring]$configData.Vault.ClientSecret = $null
-        #[securestring]$configData.Vault.ClientSecret = ("pass" | ConvertTo-SecureString -AsPlainText)
     }
     else {
         [securestring]($configData.Vault.ClientSecret | ConvertTo-SecureString -AsPlainText)
