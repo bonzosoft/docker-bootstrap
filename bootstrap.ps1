@@ -56,13 +56,10 @@ try {
         return [IO.DirectoryInfo](Join-Path -Path $this.BasePath -ChildPath @($this.Name))
     })
     Add-Member -InputObject $repositorySplat -MemberType 'ScriptProperty' -Name "Uri"          -Value ([scriptblock]{
-        return [uri]::new($this.Domain, @($this.Organization, $this.Name, ".git") -join "/")
+        return [uri]::new($this.Domain, @($this.Organization.AbsoluteUri, $this.Name, ".git") -join "/")
     })
 
-    Write-host "uri:"
-    $repositorySplat.Uri
-
-return
+    
     # Disable stdout y stderr display for native commands ----------------------
     [hashtable]$disableRedirect = @{
         RedirectStandardOutput = [System.IO.Path]::GetTempFileName()
