@@ -100,7 +100,7 @@ try {
         [string]$configData.Git.Token = ""
     }
 
-    write-host "credenciales leidas: $configData.Vault.ClientId`n$configData.Vault.ClientSecret"
+    write-host "credenciales leidas: $($configData.Vault.ClientId)`n$($configData.Vault.ClientSecret)"
 
     do {
         if (-not ([string]::IsNullOrWhiteSpace($configData.Vault.ClientId) -and [string]::IsNullOrWhiteSpace($configData.Vault.ClientSecret))) {
