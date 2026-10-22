@@ -83,7 +83,9 @@ try {
     }
 
     $configData
-    
+    $configData.Vault.ClientId
+    $configData.Vault.ClientSecret
+
     if ($configData -isnot [hashtable]) {
         [OrderedHashtable]$configData = [ordered]@{}
     }
