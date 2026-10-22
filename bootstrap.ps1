@@ -174,7 +174,7 @@ try {
 
 
             if ($null -ne $repositorySplat.Token) {
-                @splat = @{
+                $splat = @{
                     FilePath      = "git"
                     ArgumentList  = @(
                         "-c", "credential.helper=cache"
