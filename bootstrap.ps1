@@ -146,7 +146,8 @@ try {
             if (-not [string]::IsNullOrWhiteSpace($output)) {
                 $vaultSplat.Token = ($output | ConvertTo-SecureString -AsPlainText)
             }
-    
+            
+            <#
             $splat = @{
                 FilePath     = "infisical"
                 ArgumentList = @(
@@ -171,10 +172,12 @@ try {
             if ($processResult.ExitCode -ne 0) {
                 throw "Command finished with exit code: $($process.ExitCode)."
             }
-    
+            #>
+
             Write-Host "habemus token"
             Write-Host "token:"
-            $token
+            $vaultSplat.Token
+            
         }
     #} while ($true)
         $processResult
