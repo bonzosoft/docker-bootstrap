@@ -107,9 +107,15 @@ try {
     write-host "credenciales leidas: $($configData.Vault.UserName)`n$($configData.Vault.Password)"
 
     #do {
+        if ($configData.Git.Token.Length -gt 0) {
+            git
+        }
+
+
+
         if (-not ([string]::IsNullOrWhiteSpace($configData.Vault.UserName) -and [string]::IsNullOrWhiteSpace($configData.Vault.Password))) {
             $splat = @{
-                TypeName = "System.Management.Automation.PSCredential"
+                TypeName     = "System.Management.Automation.PSCredential"
                 ArgumentList = @(
                     $configData.Vault.UserName
                     ($configData.Vault.Password | ConvertTo-SecureString -AsPlainText)
@@ -117,62 +123,52 @@ try {
             }
             $vaultSplat.Credential = New-Object @splat -ErrorAction 'Stop'
 
-
-            #$Env:INFISICAL_DISABLE_UPDATE_CHECK         = $true
-            #$Env:INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET = $vaultSplat.Credential.GetNetworkCredential().Password
-
+            # Infisical login
             New-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -Value $true | Out-Null
             New-Item -Path "Env:\INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" -Value $vaultSplat.Credential.GetNetworkCredential().Password | Out-Null
             try {
                 $vaultSplat.Token = ConvertTo-SecureString -String (
-                    & infisical login `
-                    --domain $vaultSplat.Domain.AbsoluteUri `
-                    --method=universal-auth `
-                    --client-id $vaultSplat.Credential.GetNetworkCredential().UserName `
-                    --telemetry=false `
-                    --plain `
-                    --silent
+                    infisical login `
+                        --domain $vaultSplat.Domain.AbsoluteUri `
+                        --method=universal-auth `
+                        --client-id $vaultSplat.Credential.GetNetworkCredential().UserName `
+                        --telemetry=false `
+                        --plain `
+                        --silent
                 ) -AsPlainText
+                if ($LASTEXITCODE -ne 0) {
+                    throw "Command finished with exit code: $LASTEXITCODE."
+                }
+
+                Write-Host "infisical token:"
+                $vaultSplat.Token | ConvertFrom-SecureString -AsPlainText
+                ConvertFrom-SecureString -SecureString $vaultSplat.Token -AsPlainText
+
+                $configData.Git.Token = ConvertTo-SecureString -String (
+                    infisical secrets get "GITHUB_TOKEN_AST_BONZOSOFT_READONLY_ALL" `
+                        --domain $vaultSplat.Domain.AbsoluteUri `
+                        --projectId $vaultSplat.Project `
+                        --path "/" `
+                        --telemetry=false `
+                        --plain `
+                        --silent
+                ) -AsPlainText
+                if ($LASTEXITCODE -ne 0) {
+                    throw "Command finished with exit code: $LASTEXITCODE."
+                }
+                Write-Host "github token:"
+                $configData.Git.Token | ConvertFrom-SecureString -AsPlainText
             }
             finally {
                 Remove-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -ErrorAction 'SilentlyContinue'
                 Remove-Item -Path "Env:\INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" -ErrorAction 'SilentlyContinue'
             }
-            if ($LASTEXITCODE -ne 0) {
-                throw "Command finished with exit code: $LASTEXITCODE."
-            }
-            
-            <#
-            $splat = @{
-                FilePath     = "infisical"
-                ArgumentList = @(
-                    "login"
-                    "--domain",        $vaultSplat.Domain.AbsoluteUri
-                    "--method=universal-auth"
-                    "--client-id",     $vaultSplat.Credential.GetNetworkCredential().UserName
-                   #"--client-secret", $vaultSplat.Credential.GetNetworkCredential().Password
-                    "--telemetry=false"
-                    "--plain"
-                    "--silent"
-                )
-                Environment  = @{
-                    INFISICAL_DISABLE_UPDATE_CHECK         = $true
-                    INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET = $vaultSplat.Credential.GetNetworkCredential().Password
-                }
-                NoNewWindow  = $true
-                Wait         = $true
-                PassThru     = $true
-            }
-            $processResult = Start-Process @splat -ErrorAction 'Stop' -RedirectStandardOutput Variable:token
-            if ($processResult.ExitCode -ne 0) {
-                throw "Command finished with exit code: $($process.ExitCode)."
-            }
-            #>
 
-            Write-Host "habemus token"
-            Write-Host "token:"
-            $vaultSplat.Token | ConvertFrom-SecureString -AsPlainText
-            ConvertFrom-SecureString -SecureString $vaultSplat.Token -AsPlainText
+
+
+
+
+            N
             
         }
     #} while ($true)
