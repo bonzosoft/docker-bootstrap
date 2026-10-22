@@ -56,7 +56,7 @@ try {
         return [IO.DirectoryInfo](Join-Path -Path $this.BasePath -ChildPath @($this.Name))
     })
     Add-Member -InputObject $repositorySplat -MemberType 'ScriptProperty' -Name "Uri"          -Value ([scriptblock]{
-        return [uri]::new($this.Domain, @($this.Organization, $this.Name, ".git") -join "/")
+        return [uri]::new($this.Domain, @($this.Organization, $this.Name) -join "/")
     })
 
 
@@ -198,6 +198,7 @@ try {
             }
 
             $repositorySplat.Uri.AbsoluteUri
+            $repositorySplat.Domain
             git `
                 -c credential.helper=cache `
                 -c credential.interactive=false `
