@@ -121,8 +121,8 @@ try {
             #$Env:INFISICAL_DISABLE_UPDATE_CHECK         = $true
             #$Env:INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET = $vaultSplat.Credential.GetNetworkCredential().Password
 
-            New-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -Value $true
-            New-Item -Path "Env:\INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" -Value $vaultSplat.Credential.GetNetworkCredential().Password
+            New-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -Value $true | Out-Null
+            New-Item -Path "Env:\INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" -Value $vaultSplat.Credential.GetNetworkCredential().Password | Out-Null
             try {
                 [string]$output = $(
                     & infisical login `
