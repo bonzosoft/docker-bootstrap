@@ -62,8 +62,6 @@ try {
     Write-host "uri:"
     $repositorySplat.Uri
 
-    [uri]::new($repositorySplat.Domain, @($repositorySplat.Organization, ($repositorySplat.Name + "/.git")))
-
 return
     # Disable stdout y stderr display for native commands ----------------------
     [hashtable]$disableRedirect = @{
