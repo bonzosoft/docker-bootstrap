@@ -88,10 +88,12 @@ try {
         [OrderedHashtable]$configData.Vault = [ordered]@{}
     }
     if ((-not $configData.ContainsKey("ClientId"))) {
-        [string]$configData.Vault.ClientId = "user"
+        [string]$configData.Vault.ClientId = ""
+        #[string]$configData.Vault.ClientId = "user"
     }
     if ((-not $configData.ContainsKey("ClientSecret"))) {
-        [securestring]$configData.Vault.ClientSecret = ("pass" | ConvertTo-SecureString -AsPlainText)
+        [securestring]$configData.Vault.ClientSecret = ""
+        #[securestring]$configData.Vault.ClientSecret = ("pass" | ConvertTo-SecureString -AsPlainText)
     }
     if ((-not $configData.ContainsKey("Git")) -or ($configData.Git -isnot [hashtable])) {
         [OrderedHashtable]$configData.Git = [ordered]@{}
@@ -135,7 +137,7 @@ try {
             }
             $processResult = Start-Process @splat -ErrorAction 'Stop'
             if ($processResult.ExitCode -ne 0) {
-                throw "Command finished with exit code: $($pocess.ExitCode)."
+                throw "Command finished with exit code: $($process.ExitCode)."
             }
     
             Write-Host "habemus token"
