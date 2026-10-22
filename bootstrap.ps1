@@ -132,9 +132,6 @@ try {
                 if ($LASTEXITCODE -ne 0) {
                     throw "Command finished with exit code: $LASTEXITCODE."
                 }
-
-                Write-Host "infisical token:"
-                $vaultSplat.Token | ConvertFrom-SecureString -AsPlainText
             }
             finally {
                 Remove-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -ErrorAction 'SilentlyContinue'
@@ -157,8 +154,6 @@ try {
                 if ($LASTEXITCODE -ne 0) {
                     throw "Command finished with exit code: $LASTEXITCODE."
                 }
-                Write-Host "github token:"
-                $repositorySplat.Token | ConvertFrom-SecureString -AsPlainText
             }
             finally {
                 Remove-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -ErrorAction 'SilentlyContinue'
@@ -187,8 +182,6 @@ try {
                 Remove-Item -Path $repositorySplat.Path -Recurse -Force
             }
 
-            $repositorySplat.Uri.AbsoluteUri
-            $repositorySplat.Domain
             git `
                 -c credential.helper=cache `
                 -c credential.interactive=false `
