@@ -59,8 +59,6 @@ try {
         return [uri]::new($this.Domain, @($this.Organization, $this.Name, ".git") -join "/")
     })
 
-    Write-Host "uri"
-    $repositorySplat.Uri
 
     # Disable stdout y stderr display for native commands ----------------------
     [hashtable]$disableRedirect = @{
@@ -199,10 +197,7 @@ try {
                 Remove-Item -Path $repositorySplat.Path -Recurse -Force
             }
 
-
-            Write-Host "uri"
-            $repositorySplat.Uri
-
+            $repositorySplat.Uri.AbsoluteUri
             git `
                 -c credential.helper=cache `
                 -c credential.interactive=false `
