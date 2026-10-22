@@ -137,12 +137,14 @@ try {
                 Wait         = $true
                 PassThru     = $true
             }
-            $processResult = Start-Process @splat -ErrorAction 'Stop'
+            $processResult = Start-Process @splat -ErrorAction 'Stop' -RedirectStandardOutput Variable:token
             if ($processResult.ExitCode -ne 0) {
                 throw "Command finished with exit code: $($process.ExitCode)."
             }
     
             Write-Host "habemus token"
+            Write-Host "token:"
+            $token
         }
     #} while ($true)
         $processResult
