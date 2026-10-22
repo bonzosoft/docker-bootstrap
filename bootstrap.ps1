@@ -56,7 +56,7 @@ try {
         return [IO.DirectoryInfo](Join-Path -Path $this.BasePath -ChildPath @($this.Name))
     })
     Add-Member -InputObject $repositorySplat -MemberType 'ScriptProperty' -Name "Uri"          -Value ([scriptblock]{
-        return [uri]::new($this.Domain, @($this.Organization, $this.Name) -join "/")
+        return [uri]::new($this.Domain.AbsoluteUri, @($this.Organization, $this.Name) -join "/")
     })
 
 
