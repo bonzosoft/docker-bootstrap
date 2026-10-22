@@ -50,6 +50,7 @@ try {
     Add-Member -InputObject $repositorySplat -MemberType 'NoteProperty'   -Name "Organization" -Value ([string]"bonzosoft")
     Add-Member -InputObject $repositorySplat -MemberType 'NoteProperty'   -Name "Name"         -Value ([string]"docker-deploy")
     Add-Member -InputObject $repositorySplat -MemberType 'NoteProperty'   -Name "Branch"       -Value ([string]"main")
+    Add-Member -InputObject $repositorySplat -MemberType 'NoteProperty'   -Name "Token"        -value $null
     Add-Member -InputObject $repositorySplat -MemberTYpe 'NoteProperty'   -Name "BasePath"     -Value ([IO.DirectoryInfo]$PWD.Path)
     Add-Member -InputObject $repositorySplat -MemberType 'ScriptProperty' -Name "Path"         -Value ([scriptblock]{
         return [IO.DirectoryInfo](Join-Path -Path $this.BasePath -ChildPath @($this.Name))
@@ -123,6 +124,7 @@ try {
             }
             $vaultSplat.Credential = New-Object @splat -ErrorAction 'Stop'
 
+
             # Infisical login
             New-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -Value $true | Out-Null
             New-Item -Path "Env:\INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" -Value $vaultSplat.Credential.GetNetworkCredential().Password | Out-Null
@@ -143,8 +145,17 @@ try {
                 Write-Host "infisical token:"
                 $vaultSplat.Token | ConvertFrom-SecureString -AsPlainText
                 ConvertFrom-SecureString -SecureString $vaultSplat.Token -AsPlainText
+            }
+            finally {
+                Remove-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -ErrorAction 'SilentlyContinue'
+                Remove-Item -Path "Env:\INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" -ErrorAction 'SilentlyContinue'
+            }
 
-                $configData.Git.Token = ConvertTo-SecureString -String (
+            # Get/Update Github Token
+            New-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -Value $true | Out-Null
+            New-Item -Path "Env:\INFISICAL_TOKEN" -Value ($vaultSplat.Token | ConvertFrom-SecureString -AsPlainText) | Out-Null
+            try {
+                $repositorySplat.Token = ConvertTo-SecureString -String (
                     infisical secrets get "GITHUB_TOKEN_AST_BONZOSOFT_READONLY_ALL" `
                         --domain $vaultSplat.Domain.AbsoluteUri `
                         --projectId $vaultSplat.Project `
@@ -157,11 +168,11 @@ try {
                     throw "Command finished with exit code: $LASTEXITCODE."
                 }
                 Write-Host "github token:"
-                $configData.Git.Token | ConvertFrom-SecureString -AsPlainText
+                $repositorySplat.Token | ConvertFrom-SecureString -AsPlainText
             }
             finally {
                 Remove-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -ErrorAction 'SilentlyContinue'
-                Remove-Item -Path "Env:\INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" -ErrorAction 'SilentlyContinue'
+                Remove-Item -Path "Env:\INFISICAL_TOKEN" -ErrorAction 'SilentlyContinue'
             }
 
 
