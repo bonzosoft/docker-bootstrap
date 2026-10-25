@@ -9,6 +9,9 @@ using namespace System.Management.Automation # OrderedHashtable, PSCredential
 [OutputType([void])]
 param(
     [Parameter()]
+    [switch]$Refresh, # force logind data (vault clientid, vault clientsecret and git token) refresh
+
+    [Parameter()]
     [switch]$KeepCredential
 )
 
@@ -36,12 +39,12 @@ try {
 
     # Vault configuration ------------------------------------------------------
     [pscustomobject]$vaultSplat = [pscustomobject]@{}
-    Add-Member -InputObject $vaultSplat -MemberType 'NoteProperty' -Name "Credential"   -Value $null
+    Add-Member -InputObject $vaultSplat -MemberType 'NoteProperty' -Name "Credential"   -Value ([pscredential]$null)
     Add-Member -InputObject $vaultSplat -MemberType 'NoteProperty' -Name "Domain"       -Value ([uri]"https://eu.infisical.com")
     Add-Member -InputObject $vaultSplat -MemberType 'NoteProperty' -Name "Organization" -Value ([guid]"8008422a-830a-4a7c-8472-ab56f0172560")
     Add-Member -InputObject $vaultSplat -MemberType 'NoteProperty' -Name "Project"      -Value ([guid]"8a484bc8-4a18-468e-842c-7a264394781e")
     Add-Member -InputObject $vaultSplat -MemberType 'NoteProperty' -Name "Environment"  -Value ([string]"dev")
-    Add-Member -InputObject $vaultSplat -MemberType 'NoteProperty' -Name "Token"        -Value $null
+    Add-Member -InputObject $vaultSplat -MemberType 'NoteProperty' -Name "Token"        -Value ([securestring]$null)
 
 
     # Repository configuration -------------------------------------------------
@@ -50,7 +53,7 @@ try {
     Add-Member -InputObject $repositorySplat -MemberType 'NoteProperty'   -Name "Organization" -Value ([string]"bonzosoft")
     Add-Member -InputObject $repositorySplat -MemberType 'NoteProperty'   -Name "Name"         -Value ([string]"docker-deploy")
     Add-Member -InputObject $repositorySplat -MemberType 'NoteProperty'   -Name "Branch"       -Value ([string]"main")
-    Add-Member -InputObject $repositorySplat -MemberType 'NoteProperty'   -Name "Token"        -value $null
+    Add-Member -InputObject $repositorySplat -MemberType 'NoteProperty'   -Name "Token"        -value ([securestring]$null)
     Add-Member -InputObject $repositorySplat -MemberTYpe 'NoteProperty'   -Name "BasePath"     -Value ([IO.DirectoryInfo]$PWD.Path)
     Add-Member -InputObject $repositorySplat -MemberType 'ScriptProperty' -Name "Path"         -Value ([scriptblock]{
         return [IO.DirectoryInfo](Join-Path -Path $this.BasePath -ChildPath @($this.Name))
@@ -61,7 +64,6 @@ try {
    
 
     #Region - Main -------------------------------------------------------------
-
 
     # Configuration validation -------------------------------------------------
     Write-Information -MessageData "Loading local configuration."
@@ -74,8 +76,9 @@ try {
     if (-not $configFile.Exists) {
         $configFile.Create().Dispose()
     }
+
     if ($configFile.Length -ne 0) {
-        $configData = Get-Content -Path $configFile -ErrorAction 'SilentlyContinue' |
+        $configData = Get-Content -Path $configFile -Raw -ErrorAction 'SilentlyContinue' |
             ConvertFrom-Json -Depth 9 -AsHashtable -ErrorAction 'SilentlyContinue'
     }
 
@@ -86,117 +89,194 @@ try {
         [OrderedHashtable]$configData.Vault = [ordered]@{}
     }
     if ((-not $configData.Vault.ContainsKey("UserName"))) {
-        [string]$configData.Vault.UserName = ""
+        $configData.Vault.UserName = [string]""
     }
-    if ((-not $configData.Vault.ContainsKey("Password"))) {
-        [securestring]$configData.Vault.Password = $null
+    if ((-not $configData.Vault.ContainsKey("Password")) -or [string]::IsNullOrWhiteSpace($configData.Vault.Password)) {
+        $configData.Vault.Password = [securestring]$null
     }
     else {
-        [securestring]($configData.Vault.Password | ConvertTo-SecureString -AsPlainText)
+        $configData.Vault.Password = [securestring](ConvertTo-SecureString -String $configData.Vault.Password -AsPlainText -ErrorAction 'Continue')
     }
     if ((-not $configData.ContainsKey("Git")) -or ($configData.Git -isnot [hashtable])) {
         [OrderedHashtable]$configData.Git = [ordered]@{}
     }
-    if (-not $configData.Git.ContainsKey("Token")) {
-        [string]$configData.Git.Token = ""
+    if ((-not $configData.Git.ContainsKey("Token")) -or [string]::IsNullOrWhiteSpace($configData.Git.Token)) {
+        $configData.Git.Token = [securestring]$null
+    }
+    else {
+        $configData.Git.Token = [securestring](ConvertTo-SecureString -String $configData.Git.Token -AsPlainText -ErrorAction 'Continue')
     }
 
-    write-host "credenciales leidas: $($configData.Vault.UserName)`n$($configData.Vault.Password)"
 
-    #do {
+    if ([string]::IsNullOrWhiteSpace($configData.Vault.UserName) -or 
+        ($null -eq $configData.Vault.Password)) {
 
-        if (-not ([string]::IsNullOrWhiteSpace($configData.Vault.UserName) -and [string]::IsNullOrWhiteSpace($configData.Vault.Password))) {
-            $splat = @{
-                TypeName     = "System.Management.Automation.PSCredential"
-                ArgumentList = @(
-                    $configData.Vault.UserName
-                    ($configData.Vault.Password | ConvertTo-SecureString -AsPlainText)
-                )
-            }
-            $vaultSplat.Credential = New-Object @splat -ErrorAction 'Stop'
-
-
-            # Infisical login
-            New-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -Value $true | Out-Null
-            New-Item -Path "Env:\INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" -Value $vaultSplat.Credential.GetNetworkCredential().Password | Out-Null
-            try {
-                $vaultSplat.Token = ConvertTo-SecureString -String (
-                    infisical login `
-                        --domain $vaultSplat.Domain.AbsoluteUri `
-                        --method=universal-auth `
-                        --client-id $vaultSplat.Credential.GetNetworkCredential().UserName `
-                        --telemetry=false `
-                        --plain `
-                        --silent
-                ) -AsPlainText
-                if ($LASTEXITCODE -ne 0) {
-                    throw "Command finished with exit code: $LASTEXITCODE."
+        do {
+            # Infisical manual login
+            infisical `
+                login `
+                --domain $vaultSplat.Domain.AbsoluteUri
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "Unable to login. Press anykey to continue or 'n' to abort login."
+                switch (Read-Host) {
+                    {@("no", "n") -icontains $PSItem} {
+                        throw "Login canceled by user."
+                    }
+                    default {
+                        continue
+                    }
                 }
             }
-            finally {
-                Remove-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -ErrorAction 'SilentlyContinue'
-                Remove-Item -Path "Env:\INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" -ErrorAction 'SilentlyContinue'
+            else {
+                break
             }
+        }
+        while ($true)
 
-            # Get/Update Github Token
-            New-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -Value $true | Out-Null
-            New-Item -Path "Env:\INFISICAL_TOKEN" -Value ($vaultSplat.Token | ConvertFrom-SecureString -AsPlainText) | Out-Null
-            try {
-                $repositorySplat.Token = ConvertTo-SecureString -String (
-                    infisical secrets get "GITHUB_TOKEN_AST_BONZOSOFT_READONLY_ALL" `
-                        --domain $vaultSplat.Domain.AbsoluteUri `
-                        --projectId $vaultSplat.Project `
-                        --path "/" `
-                        --telemetry=false `
-                        --plain `
-                        --silent
-                ) -AsPlainText
-                if ($LASTEXITCODE -ne 0) {
-                    throw "Command finished with exit code: $LASTEXITCODE."
-                }
-            }
-            finally {
-                Remove-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -ErrorAction 'SilentlyContinue'
-                Remove-Item -Path "Env:\INFISICAL_TOKEN" -ErrorAction 'SilentlyContinue'
-            }
+        [string]$configData.Vault.UserName = infisical `
+            sm secrets get "INFISICAL_CLIENT_ID_DEPLOYMENT_READONLY" `
+            --domain $vaultSplat.Domain.AbsoluteUri `
+            --projectId $vaultSplat.Project `
+            --path "/" `
+            --telemetry=false `
+            --plain `
+            --silent
+        if ($LASTEXITCODE -ne 0) {
+            throw "Unable to retrieve UserName from vault. Please check vault configuration."
+        }
+        if ([string]::IsNullOrWhiteSpace($configData.Vault.UserName)) {
+            throw "Empty UserName. Please check vault configuration."
+        }
 
-            if ($null -ne $repositorySplat.Token) {
-                @(
-                        ("protocol=" + $repositorySplat.Domain.Scheme)
-                        ("host=" + $repositorySplat.Domain.Authority)
-                        ("username=" + "x-access-token")
-                        ("password=" + ($repositorySplat.Token | ConvertFrom-SecureString -AsPlainText))
-                    ) |
-                    git `
-                        -c credential.helper=cache `
-                        -c credential.interactive=false `
-                        credential `
-                        approve
-                if ($LASTEXITCODE -ne 0) {
-                    throw "Command finished with exit code: $LASTEXITCODE."
-                }
-            }
+        [string]$configData.Vault.Password = infisical `
+            sm secrets get "INFISICAL_CLIENT_SECRET_DEPLOYMENT_READONLY" `
+            --domain $vaultSplat.Domain.AbsoluteUri `
+            --projectId $vaultSplat.Project `
+            --path "/" `
+            --telemetry=false `
+            --plain `
+            --silent
+        if ($LASTEXITCODE -ne 0) {
+            throw "Unable to retrieve Password from vault. Please check vault configuration."
+        }
+        if ([string]::IsNullOrWhiteSpace($configData.Vault.Password)) {
+            throw "Empty Password. Please check vault configuration."
+        }
+        else {
+            [securestring]$configData.Vault.Password = ConvertTo-SecureString -String $configData.Vault.Password -AsPlainText
+        }
 
-            if (Test-Path -Path $repositorySplat.Path -PathType 'Any') {
-                Write-Information -MessageData "Removing local repository."
-                Remove-Item -Path $repositorySplat.Path -Recurse -Force
-            }
+        # Infisical logout
+        infisical `
+            logout
+        if ($LASTEXITCODE -ne 0) {
+            throw "Command finished with exit code: $LASTEXITCODE."
+        }
+    }
 
+    $splat = @{
+        TypeName     = "System.Management.Automation.PSCredential"
+        ArgumentList = @(
+            $configData.Vault.UserName
+            $configData.Vault.Password
+        )
+    }
+    [pscredential]$vaultSplat.Credential = New-Object @splat -ErrorAction 'Stop'
+
+
+    # Infisical machine login
+    New-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -Value $true -Force | Out-Null
+    New-Item -Path "Env:\INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" -Value $vaultSplat.Credential.GetNetworkCredential().Password -Force | Out-Null
+    try {
+        [string]$configData.Vault.Token = infisical login `
+                --domain $vaultSplat.Domain.AbsoluteUri `
+                --method=universal-auth `
+                --client-id $vaultSplat.Credential.GetNetworkCredential().UserName `
+                --telemetry=false `
+                --plain `
+                --silent
+        if ($LASTEXITCODE -ne 0) {
+            throw "Unable to login using machine credentials. Please check vault configuration."
+        }
+        if ([string]::IsNullOrWhiteSpace($configData.Vault.Token)) {
+            throw "Unexpected error: empty vault token."
+        }
+        else {
+            [securestring]$configData.Vault.Token = ConvertTo-SecureString -String $configData.Vault.Token -AsPlainText
+            [securestring]$vaultSplat.Token = $configData.Vault.Token.Copy()
+        }
+    }
+    finally {
+        Remove-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -ErrorAction 'SilentlyContinue'
+        Remove-Item -Path "Env:\INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" -ErrorAction 'SilentlyContinue'
+    }
+
+
+    # Get/Update Github Token
+    New-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -Value $true -Force | Out-Null
+    New-Item -Path "Env:\INFISICAL_TOKEN" -Value (ConvertFrom-SecureString -SecureString $vaultSplat.Token -AsPlainText) -Force | Out-Null
+    try {
+        [string]$configData.Git.Token = infisical sm secrets get "GITHUB_TOKEN_AST_BONZOSOFT_READONLY_ALL" `
+                --domain $vaultSplat.Domain.AbsoluteUri `
+                --projectId $vaultSplat.Project `
+                --path "/" `
+                --telemetry=false `
+                --plain `
+                --silent
+        if ($LASTEXITCODE -ne 0) {
+            throw "Unable to retrieve Github token. Please check vault configuration."
+        }
+        if ([string]::IsNullOrWhiteSpace($configData.Git.Token)) {
+            throw "Empty Git token. Please check vault configuration."
+        }
+        else {
+            [securestring]$configData.Git.Token = ConvertTo-SecureString -String $configData.Git.Token -AsPlainText
+            [securestring]$repositorySplat.Token = $configData.Git.Token.Copy()
+        }
+    }
+    finally {
+        Remove-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -ErrorAction 'SilentlyContinue'
+        Remove-Item -Path "Env:\INFISICAL_TOKEN" -ErrorAction 'SilentlyContinue'
+    }
+
+    if ($null -ne $repositorySplat.Token) {
+        @(
+                ("protocol=" + $repositorySplat.Domain.Scheme)
+                ("host=" + $repositorySplat.Domain.Authority)
+                ("username=" + "x-access-token")
+                ("password=" + (ConvertFrom-SecureString -SecureString $repositorySplat.Token -AsPlainText))
+            ) |
             git `
                 -c credential.helper=cache `
                 -c credential.interactive=false `
-                clone `
-                --branch $repositorySplat.Branch `
-                --depth 1 `
-                --recurse-submodules `
-                --shallow-submodules `
-                $repositorySplat.Uri.AbsoluteUri
-            
+                credential `
+                approve
+        if ($LASTEXITCODE -ne 0) {
+            throw "Unable to approve Git credentials. Command finished with exit code: $LASTEXITCODE."
         }
-    #} while ($true)
+    }
 
-    
-return
+    if (Test-Path -Path $repositorySplat.Path -PathType 'Any') {
+        Write-Information -MessageData "Removing local repository."
+        Remove-Item -Path $repositorySplat.Path -Recurse -Force
+    }
+
+    git `
+        -c credential.helper=cache `
+        -c credential.interactive=false `
+        clone `
+        --branch $repositorySplat.Branch `
+        --depth 1 `
+        --recurse-submodules `
+        --shallow-submodules `
+        $repositorySplat.Uri.AbsoluteUri
+    if ($LASTEXITCODE -ne 0) {
+        throw "An error occurred while cloning $($repositorySplat.Name). Command finished with exit code: $LASTEXITCODE."
+    }
+
+
+
+    return
 
 
 
