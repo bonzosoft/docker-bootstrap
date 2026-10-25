@@ -282,7 +282,7 @@ try {
 
 
     foreach ($item in @("pwsh")) {
-        [IO.FIleInfo]$source = Join-Path -Path ([IO.FileInfo]$PWD.Path) -ChildPath @($repository.Name, "${item}.sh")
+        [IO.FIleInfo]$source = Join-Path -Path ([IO.FileInfo]$PWD.Path) -ChildPath @($repositorySplat.Name, "${item}.sh")
         [IO.FIleInfo]$target = Join-Path -Path ([IO.FileInfo]$PWD.Path) -ChildPath @($item)
     
         if (Test-Path -Path $source -PathType 'Leaf') {
