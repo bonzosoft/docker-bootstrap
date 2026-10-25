@@ -166,7 +166,8 @@ try {
         # Infisical logout
         Write-Information -MessageData "Discarding manual login session."
         infisical `
-            logout
+            logout `
+            --silent
         if ($LASTEXITCODE -ne 0) {
             throw "Command finished with exit code: $LASTEXITCODE."
         }
@@ -229,27 +230,29 @@ try {
             throw "Empty Git token. Please check vault configuration."
         }
         else {
-            @(
-                ("protocol=" + $repositorySplat.Domain.Scheme)
-                ("host=" + $repositorySplat.Domain.Authority)
-                ("username=" + "x-access-token")
-                ("password=" + (ConvertFrom-SecureString -SecureString $repositorySplat.Token -AsPlainText))
-            ) |
-            git `
-                -c credential.helper=cache `
-                -c credential.interactive=false `
-                credential `
-                approve
-            if ($LASTEXITCODE -ne 0) {
-                throw "Unable to approve Git credentials. Command finished with exit code: $LASTEXITCODE."
-            }
-    
             [securestring]$repositorySplat.Token = ConvertTo-SecureString -String $configData.Git.Token -AsPlainText
         }
     }
     finally {
         Remove-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -ErrorAction 'SilentlyContinue'
         Remove-Item -Path "Env:\INFISICAL_TOKEN" -ErrorAction 'SilentlyContinue'
+    }
+
+    # check repository token
+    Write-Information -MessageData "Validating repository token."
+    @(
+        ("protocol=" + $repositorySplat.Domain.Scheme)
+        ("host=" + $repositorySplat.Domain.Authority)
+        ("username=" + "x-access-token")
+        ("password=" + (ConvertFrom-SecureString -SecureString $repositorySplat.Token -AsPlainText))
+    ) |
+    git `
+        -c credential.helper=cache `
+        -c credential.interactive=false `
+        credential `
+        approve
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to validate repository credentials. Command finished with exit code: $LASTEXITCODE."
     }
 
     # write correct cofiguration to config file
