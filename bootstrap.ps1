@@ -299,9 +299,6 @@ try {
                 PassThru     = $true
             }
             $process = Start-Process @splat -ErrorAction 'Stop'
-            if ($VerbosePreference -ne 'Continue') {
-                $splat += $disableRedirect
-            }
             if ($process.ExitCode -ne 0) {
                 throw "Command finished with exit code: $($pocess.ExitCode)."
             }
