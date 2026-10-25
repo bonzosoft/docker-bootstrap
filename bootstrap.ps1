@@ -110,7 +110,8 @@ try {
             Write-Information -MessageData "Insufficient login information. Please complete manual login:"
             infisical `
                 login `
-                --domain $vaultSplat.Domain.AbsoluteUri
+                --domain $vaultSplat.Domain.AbsoluteUri `
+                --silent
             if ($LASTEXITCODE -ne 0) {
                 Write-Host "Unable to login. Press anykey to continue or 'n' to abort login."
                 switch (Read-Host) {
@@ -196,7 +197,7 @@ try {
         if ($LASTEXITCODE -ne 0) {
             throw "Unable to login using machine credentials. Please check vault configuration."
         }
-        if ([string]::IsNullOrWhiteSpace($vaultSplat.Token)) {
+        if ([string]::IsNullOrWhiteSpace($configData.Vault.Token)) {
             throw "Unexpected error: empty vault token."
         }
         else {
