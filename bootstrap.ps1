@@ -9,10 +9,10 @@ using namespace System.Management.Automation # OrderedHashtable, PSCredential
 [OutputType([void])]
 param(
     [Parameter()]
-    [switch]$Refresh, # force login data (vault clientid and clientsecret) refresh
+    [switch]$Refresh, # force refresh of login data (vault clientid and vault clientsecret)
 
     [Parameter()]
-    [switch]$KeepCredential
+    [switch]$KeepCredential # keep git crednetials cache
 )
 
 try {
@@ -306,7 +306,9 @@ try {
         throw "An error occurred while cloning $($repositorySplat.Name). Command finished with exit code: $LASTEXITCODE."
     }
     else {
-        Remove-Item -Path $repositoryBackup -Force -Recurse
+        if (Test-Path -Path $repositoryBackup -PathType 'Any') {
+            Remove-Item -Path $repositoryBackup -Force -Recurse
+        }
     }
 
     foreach ($item in @("pwsh")) {
