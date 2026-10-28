@@ -9,7 +9,7 @@ using namespace System.Management.Automation # OrderedHashtable, PSCredential
 [OutputType([void])]
 param(
     [Parameter()]
-    [switch]$Refresh, # force logind data (vault clientid, vault clientsecret and git token) refresh
+    [switch]$Refresh, # force login data (vault clientid and clientsecret) refresh
 
     [Parameter()]
     [switch]$KeepCredential
@@ -102,7 +102,8 @@ try {
     }
 
 
-    if ([string]::IsNullOrWhiteSpace($configData.Vault.UserName) -or 
+    if ($Refresh.IsPresent -or
+        [string]::IsNullOrWhiteSpace($configData.Vault.UserName) -or 
         [string]::IsNullOrWhiteSpace($configData.Vault.Password)) {
 
         do {
@@ -220,6 +221,7 @@ try {
                 --domain $vaultSplat.Domain.AbsoluteUri `
                 --projectId $vaultSplat.Project `
                 --path "/" `
+                --environment $vaultSplat.Environment `
                 --telemetry=false `
                 --plain `
                 --silent
@@ -238,8 +240,8 @@ try {
         Remove-Item -Path "Env:\INFISICAL_TOKEN" -ErrorAction 'SilentlyContinue'
     }
 
-    # check repository token
-    Write-Information -MessageData "Validating repository token."
+    # add login information to credential helper
+    Write-Information -MessageData "Adding credential data to cache."
     @(
         ("protocol=" + $repositorySplat.Domain.Scheme)
         ("host=" + $repositorySplat.Domain.Authority)
@@ -255,10 +257,22 @@ try {
         throw "Unable to validate repository credentials. Command finished with exit code: $LASTEXITCODE."
     }
 
-    # write correct cofiguration to config file
-    Write-Information -MessageData "Persisting access information."
-    Set-Content -Path $configFile -Value (ConvertTo-Json -InputObject $configData -Depth 9)
-
+    # check repository credential
+    Write-Information -MessageData "Checking obtained credential."
+    git `
+        -c credential.helper=cache `
+        -c credential.interactive=false `
+        ls-remote `
+        --exit-code
+        $repositorySplat.Uir.AbsoluteUri
+    if ($LASTEXITCODE -ne 0) {
+        throw "Invalid repository credential. Please Check vault configuration."
+    }
+    else {
+        # write correct cofiguration to config file
+        Write-Information -MessageData "Persisting access information."
+        Set-Content -Path $configFile -Value (ConvertTo-Json -InputObject $configData -Depth 9) -ErrorAction 'Continue'
+    }
 
     # clone repository
     if (Test-Path -Path $repositorySplat.Path -PathType 'Any') {
@@ -280,7 +294,6 @@ try {
         throw "An error occurred while cloning $($repositorySplat.Name). Command finished with exit code: $LASTEXITCODE."
     }
 
-
     foreach ($item in @("pwsh")) {
         [IO.FIleInfo]$source = Join-Path -Path ([IO.FileInfo]$PWD.Path) -ChildPath @($repositorySplat.Name, "${item}.sh")
         [IO.FIleInfo]$target = Join-Path -Path ([IO.FileInfo]$PWD.Path) -ChildPath @($item)
@@ -300,23 +313,37 @@ try {
             }
             $process = Start-Process @splat -ErrorAction 'Stop'
             if ($process.ExitCode -ne 0) {
-                throw "Command finished with exit code: $($pocess.ExitCode)."
+                throw "Command finished with exit code: $($process.ExitCode)."
             }
         }
     }
     #Endregion
+
+    exit 0
 }
 catch {
     Write-Error -ErrorRecord $PSItem -ErrorAction 'Continue'
     Write-Error -Exception $PSItem.Exception -ErrorAction 'Continue'
     Write-Error -Message $PSItem.ScriptStackTrace -ErrorAction 'Continue'
-    return
+    exit 1
 }
 finally {
-    #if (-not $KeepCredential.IsPresent) {
-    #    Write-Information -MessageData "Removing cached credentials."
-    #    Remove-Item -Path $ghDirectory -Recurse -Force
-    #}
+    # Remove cached repository credentials.
+    Write-Information -MessageData "Removing cached repository credentials."
+    @(
+        ("protocol=" + $repositorySplat.Domain.Scheme)
+        ("host=" + $repositorySplat.Domain.Authority)
+        #""
+    ) |
+    git `
+        -c credential.helper=cache `
+        -c credential.interactive=false `
+        credential `
+        reject
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "Unable to remove cached repository credentials."
+    }
+
 
     # Script end ---------------------------------------------------------------
     Write-Information -MessageData "Completed script execution '$($thisScript[0])'."
