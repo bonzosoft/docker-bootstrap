@@ -62,6 +62,7 @@ try {
         return [uri]::new($this.Domain, @($this.Organization, $this.Name) -join "/")
     })
    
+    [IO.FileInfo]$repositoryBackup = ($repositorySplat.Path.FullName + ".bak")
 
     #Region - Main -------------------------------------------------------------
 
@@ -278,8 +279,11 @@ try {
 
     # clone repository
     if (Test-Path -Path $repositorySplat.Path -PathType 'Any') {
-        Write-Information -MessageData "Removing local repository leftovers."
-        Remove-Item -Path $repositorySplat.Path -Recurse -Force
+        Write-Information -MessageData "Backup up local resources."
+        Remove-Item -Path $repositoryBackup -Force
+        Move-Item -Path $repositorySplat.Path -Destination $repositoryBackup -Force
+        #Write-Information -MessageData "Removing local repository leftovers."
+        #Remove-Item -Path $repositorySplat.Path -Recurse -Force
     }
 
     Write-Information -MessageData "Cloning repository."
@@ -294,7 +298,14 @@ try {
         $repositorySplat.Uri.AbsoluteUri
     if ($LASTEXITCODE -ne 0) {
         throw "An error occurred while cloning $($repositorySplat.Name). Command finished with exit code: $LASTEXITCODE."
+        Remove-Item -Path $repositorySplat.Path -Force
+        Move-Item -Path $repositoryBackup -Destination $repositorySplat.Path -Force
     }
+    else {
+        #Remove-Item -Path $repositoryBackup -Force
+    }
+
+    
 
     foreach ($item in @("pwsh")) {
         [IO.FIleInfo]$source = Join-Path -Path ([IO.FileInfo]$PWD.Path) -ChildPath @($repositorySplat.Name, "${item}.sh")
