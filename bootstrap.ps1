@@ -265,7 +265,7 @@ try {
         -c credential.helper=cache `
         -c credential.interactive=false `
         ls-remote `
-        --exit-code
+        --exit-code `
         $repositorySplat.Uri.AbsoluteUri
     if ($LASTEXITCODE -ne 0) {
         throw "Invalid repository credential. Please Check vault configuration."
