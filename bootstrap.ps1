@@ -217,11 +217,13 @@ try {
     New-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -Value $true -Force | Out-Null
     New-Item -Path "Env:\INFISICAL_TOKEN" -Value (ConvertFrom-SecureString -SecureString $vaultSplat.Token -AsPlainText) -Force | Out-Null
     try {
-        [string]$configData.Git.Token = infisical sm secrets get "GITHUB_TOKEN_AST_BONZOSOFT_READONLY_ALL" `
+        [string]$configData.Git.Token = infisical `
+                sm secrets `
+                get "GITHUB_TOKEN_AST_BONZOSOFT_READONLY_ALL" `
                 --domain $vaultSplat.Domain.AbsoluteUri `
                 --projectId $vaultSplat.Project `
                 --path "/" `
-                --environment $vaultSplat.Environment `
+                --env $vaultSplat.Environment `
                 --telemetry=false `
                 --plain `
                 --silent
