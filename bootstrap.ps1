@@ -280,10 +280,10 @@ try {
     # clone repository
     if (Test-Path -Path $repositorySplat.Path -PathType 'Any') {
         Write-Information -MessageData "Backup up local resources."
-        Remove-Item -Path $repositoryBackup -Force
+        if (Test-Path -Path $repositoryBackup -PathType 'Any') {
+            Remove-Item -Path $repositoryBackup -Force
+        }
         Move-Item -Path $repositorySplat.Path -Destination $repositoryBackup -Force
-        #Write-Information -MessageData "Removing local repository leftovers."
-        #Remove-Item -Path $repositorySplat.Path -Recurse -Force
     }
 
     Write-Information -MessageData "Cloning repository."
@@ -301,11 +301,6 @@ try {
         Remove-Item -Path $repositorySplat.Path -Force
         Move-Item -Path $repositoryBackup -Destination $repositorySplat.Path -Force
     }
-    else {
-        #Remove-Item -Path $repositoryBackup -Force
-    }
-
-    
 
     foreach ($item in @("pwsh")) {
         [IO.FIleInfo]$source = Join-Path -Path ([IO.FileInfo]$PWD.Path) -ChildPath @($repositorySplat.Name, "${item}.sh")
