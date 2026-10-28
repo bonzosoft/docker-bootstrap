@@ -281,7 +281,7 @@ try {
     if (Test-Path -Path $repositorySplat.Path -PathType 'Any') {
         Write-Information -MessageData "Backup up local resources."
         if (Test-Path -Path $repositoryBackup -PathType 'Any') {
-            Remove-Item -Path $repositoryBackup -Force
+            Remove-Item -Path $repositoryBackup -Force -Recurse
         }
         Move-Item -Path $repositorySplat.Path -Destination $repositoryBackup -Force
     }
@@ -300,6 +300,9 @@ try {
         throw "An error occurred while cloning $($repositorySplat.Name). Command finished with exit code: $LASTEXITCODE."
         Remove-Item -Path $repositorySplat.Path -Force
         Move-Item -Path $repositoryBackup -Destination $repositorySplat.Path -Force
+    }
+    else {
+        Remove-Item -Path $repositoryBackup -Force -Recurse
     }
 
     foreach ($item in @("pwsh")) {
