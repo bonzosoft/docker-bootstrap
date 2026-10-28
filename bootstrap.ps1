@@ -277,7 +277,8 @@ try {
         Set-Content -Path $configFile -Value (ConvertTo-Json -InputObject $configData -Depth 9) -ErrorAction 'Continue'
     }
 
-    # clone repository
+    
+    # prepare for repository clonning
     if (Test-Path -Path $repositorySplat.Path -PathType 'Any') {
         Write-Information -MessageData "Backup up local resources."
         if (Test-Path -Path $repositoryBackup -PathType 'Any') {
@@ -286,6 +287,7 @@ try {
         Move-Item -Path $repositorySplat.Path -Destination $repositoryBackup -Force
     }
 
+    # clone repository
     Write-Information -MessageData "Cloning repository."
     git `
         -c credential.helper=cache `
@@ -297,9 +299,11 @@ try {
         --shallow-submodules `
         $repositorySplat.Uri.AbsoluteUri
     if ($LASTEXITCODE -ne 0) {
-        throw "An error occurred while cloning $($repositorySplat.Name). Command finished with exit code: $LASTEXITCODE."
-        Remove-Item -Path $repositorySplat.Path -Force
+        if (Test-Path -Path $repositorySplat.Path -PathType 'Any') {
+            Remove-Item -Path $repositorySplat.Path -Force -Recurse
+        }
         Move-Item -Path $repositoryBackup -Destination $repositorySplat.Path -Force
+        throw "An error occurred while cloning $($repositorySplat.Name). Command finished with exit code: $LASTEXITCODE."
     }
     else {
         Remove-Item -Path $repositoryBackup -Force -Recurse
@@ -340,21 +344,23 @@ catch {
 }
 finally {
     # Remove cached repository credentials.
-    Write-Information -MessageData "Removing cached repository credentials."
-    @(
-        ("protocol=" + $repositorySplat.Domain.Scheme)
-        ("host=" + $repositorySplat.Domain.Authority)
-        #""
-    ) |
-    git `
-        -c credential.helper=cache `
-        -c credential.interactive=false `
-        credential `
-        reject
-    if ($LASTEXITCODE -ne 0) {
-        Write-Warning "Unable to remove cached repository credentials."
-    }
-
+    if (-not $KeepCredential.IsPresent) {
+        Write-Information -MessageData "Removing cached repository credentials."
+        @(
+            ("protocol=" + $repositorySplat.Domain.Scheme)
+            ("host=" + $repositorySplat.Domain.Authority)
+            #""
+        ) |
+        git `
+            -c credential.helper=cache `
+            -c credential.interactive=false `
+            credential `
+            reject
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "Unable to remove cached repository credentials."
+        }
+    
+    } 
 
     # Script end ---------------------------------------------------------------
     Write-Information -MessageData "Completed script execution '$($thisScript[0])'."
