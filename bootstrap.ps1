@@ -190,7 +190,8 @@ try {
     New-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -Value $true -Force | Out-Null
     New-Item -Path "Env:\INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" -Value $vaultSplat.Credential.GetNetworkCredential().Password -Force | Out-Null
     try {
-        [string]$configData.Vault.Token = infisical login `
+        [string]$configData.Vault.Token = infisical `
+                login `
                 --domain $vaultSplat.Domain.AbsoluteUri `
                 --method=universal-auth `
                 --client-id $vaultSplat.Credential.GetNetworkCredential().UserName `
