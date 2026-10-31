@@ -68,7 +68,7 @@ try {
 
     # Configuration validation -------------------------------------------------
     Write-Information -MessageData "Reading local configuration."
-    [OrderedHashtable]$configData = [ordered]@{}
+    [OrderedHashtable]$configData = [OrderedHashtable]@{}
     
     $configFile.Refresh()
     if (-not $configFile.Directory.Exists) {
@@ -84,10 +84,10 @@ try {
     }
 
     if ($configData -isnot [hashtable]) {
-        [OrderedHashtable]$configData = [ordered]@{}
+        [OrderedHashtable]$configData = [OrderedHashtable]@{}
     }
     if ((-not $configData.ContainsKey("Vault")) -or ($configData.Vault -isnot [hashtable])) {
-        [OrderedHashtable]$configData.Vault = [ordered]@{}
+        [OrderedHashtable]$configData.Vault = [OrderedHashtable]@{}
     }
     if (-not $configData.Vault.ContainsKey("UserName")) {
         $configData.Vault.UserName = [string]""
@@ -96,7 +96,7 @@ try {
         $configData.Vault.Password = [string]""
     }
     if ((-not $configData.ContainsKey("Git")) -or ($configData.Git -isnot [hashtable])) {
-        [OrderedHashtable]$configData.Git = [ordered]@{}
+        [OrderedHashtable]$configData.Git = [OrderedHashtable]@{}
     }
     if (-not $configData.Git.ContainsKey("Token")) {
         $configData.Git.Token = [string]""
