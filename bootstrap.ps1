@@ -166,7 +166,7 @@ try {
             ForEach-Object -Process {
                 if ($PSItem.name -eq $vaultSplat.ProjectName) {
                     Write-Host "projectid: $($PSItem.id)"
-                    $vault.Project = $PSItem.id
+                    return $PSItem.id
                 }
             }
         if ($vault.Project -eq [guid]::Empty) {
