@@ -191,16 +191,18 @@ try {
             -AsHashtable |
         ForEach-Object `
             -Process {
+                $item = $PSItem
                 write-host "object:"
                 $PSItem | Out-String
-                switch ($PSItem.secretKey) {
+                
+                switch ($item.secretKey) {
                     "INFISICAL_CLIENT_ID_DEPLOYMENT_READONLY" {
-                        $configData.Vault.UserName = $PSItem.secretValue
+                        $configData.Vault.UserName = $item.secretValue
                     }
                     "INFISICAL_CLIENT_SECRET_DEPLOYMENT_READONLY" {
                         $configData.Vault.Password = `
                             ConvertTo-SecureString `
-                                -String $PSItem.secretValue `
+                                -String $item.secretValue `
                                 -AsPlainText
                     }
                     default {
