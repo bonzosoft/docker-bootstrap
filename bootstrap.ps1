@@ -1,16 +1,12 @@
 #!/usr/bin/env pwsh
 
 
-#using namespace System.Collections.Generic   # List[T]
 using namespace System.Management.Automation # OrderedHashtable, PSCredential
 
 
 [CmdletBinding()]
 [OutputType([void])]
 param(
-    [Parameter()]
-    [switch]$Refresh, # force refresh of login data (vault clientid and vault clientsecret)
-
     [Parameter()]
     [switch]$KeepCredential # keep git crednetials cache
 )
@@ -30,46 +26,33 @@ try {
 
 
     # Script-wide variables ----------------------------------------------------
-    [hashtable]$splat = @{}
+    [OrderedHashtable]$splat = @{}
 
 
     # Configuration file path --------------------------------------------------
     [IO.FileInfo]$configFile = Join-Path -Path ([IO.DirectoryInfo]$PWD.Path) -ChildPath @(".config", "config.json")
 
 
-    # Vault configuration ------------------------------------------------------
-    [pscustomobject]$vaultSplat = [pscustomobject]@{}
-    Add-Member -InputObject $vaultSplat -MemberType 'NoteProperty' -Name "Credential"   -Value ([pscredential]$null)
-    Add-Member -InputObject $vaultSplat -MemberType 'NoteProperty' -Name "Domain"       -Value ([uri]"https://eu.infisical.com")
-    Add-Member -InputObject $vaultSplat -MemberType 'NoteProperty' -Name "Organization" -Value ([guid]"8008422a-830a-4a7c-8472-ab56f0172560")
-    Add-Member -InputObject $vaultSplat -MemberType 'NoteProperty' -Name "Project"      -Value ([guid]"8a484bc8-4a18-468e-842c-7a264394781e")
-    Add-Member -InputObject $vaultSplat -MemberType 'NoteProperty' -Name "Environment"  -Value ([string]"dev")
-    Add-Member -InputObject $vaultSplat -MemberType 'NoteProperty' -Name "Token"        -Value ([securestring]$null)
+    # Vault information --------------------------------------------------------
+    [OrderedHashtable[]]$vaultSplat = [OrderedHashtable]@{
+        Domain      = [uri]"https://eu.infisical.com"
+        ProjectName = [string]"containers"
+        Environment = [string]"dev"
+    }
 
 
-    # Repository configuration -------------------------------------------------
-    [pscustomobject]$repositorySplat = [pscustomobject]@{}
-    Add-Member -InputObject $repositorySplat -MemberType 'NoteProperty'   -Name "Domain"       -Value ([uri]"https://github.com")
-    Add-Member -InputObject $repositorySplat -MemberType 'NoteProperty'   -Name "Organization" -Value ([string]"bonzosoft")
-    Add-Member -InputObject $repositorySplat -MemberType 'NoteProperty'   -Name "Name"         -Value ([string]"docker-deploy")
-    Add-Member -InputObject $repositorySplat -MemberType 'NoteProperty'   -Name "Branch"       -Value ([string]"main")
-    Add-Member -InputObject $repositorySplat -MemberType 'NoteProperty'   -Name "Token"        -value ([securestring]$null)
-    Add-Member -InputObject $repositorySplat -MemberTYpe 'NoteProperty'   -Name "BasePath"     -Value ([IO.DirectoryInfo]$PWD.Path)
-    Add-Member -InputObject $repositorySplat -MemberType 'ScriptProperty' -Name "Path"         -Value ([scriptblock]{
-        return [IO.DirectoryInfo](Join-Path -Path $this.BasePath -ChildPath @($this.Name))
-    })
-    Add-Member -InputObject $repositorySplat -MemberType 'ScriptProperty' -Name "Uri"          -Value ([scriptblock]{
-        return [uri]::new($this.Domain, @($this.Organization, $this.Name) -join "/")
-    })
-   
-    [IO.FileInfo]$repositoryBackup = ($repositorySplat.Path.FullName + ".bak")
+    # Repository information ---------------------------------------------------
+    [OrderedHashtable]$repositorySplat = [OrderedHashtable]@{
+        Domain       = [uri]"https://github.com"
+        Organization = [string]"bonzosoft"
+        Name         = [string]"docker-deploy"
+        Branch       = [string]"main"
+    }
 
-    #Region - Main -------------------------------------------------------------
 
     # Configuration validation -------------------------------------------------
     Write-Information -MessageData "Reading local configuration."
-    [OrderedHashtable]$configData = [OrderedHashtable]@{}
-    
+   
     $configFile.Refresh()
     if (-not $configFile.Directory.Exists) {
         $configFile.Directory.Create()
@@ -79,8 +62,15 @@ try {
     }
 
     if ($configFile.Length -ne 0) {
-        $configData = Get-Content -Path $configFile -Raw -ErrorAction 'SilentlyContinue' |
-            ConvertFrom-Json -Depth 9 -AsHashtable -ErrorAction 'SilentlyContinue'
+        [OrderedHashtable]$configData = `
+            Get-Content `
+                -Path $configFile `
+                -Raw `
+                -ErrorAction 'Continue' |
+            ConvertFrom-Json `
+                -Depth 9 `
+                -AsHashtable `
+                -ErrorAction 'Continue'
     }
 
     if ($configData -isnot [hashtable]) {
@@ -90,54 +80,99 @@ try {
         [OrderedHashtable]$configData.Vault = [OrderedHashtable]@{}
     }
     if (-not $configData.Vault.ContainsKey("UserName")) {
-        $configData.Vault.UserName = [string]""
+        [string]$configData.Vault.UserName = ""
     }
     if (-not $configData.Vault.ContainsKey("Password")) {
-        $configData.Vault.Password = [string]""
+        [string]$configData.Vault.Password = ""
     }
     if ((-not $configData.ContainsKey("Git")) -or ($configData.Git -isnot [hashtable])) {
         [OrderedHashtable]$configData.Git = [OrderedHashtable]@{}
     }
     if (-not $configData.Git.ContainsKey("Token")) {
-        $configData.Git.Token = [string]""
+        [string]$configData.Git.Token = ""
     }
 
+    
+    # Vault object creation ----------------------------------------------------
+    [pscustomobject]$vault = [pscustomobject]@{}
+    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Domain"       -Value ([uri]$vaultSplat.Domain)
+    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Project"      -Value ([guid]::Empty)
+    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Environment"  -Value ([string]$vaultSplat.Environment)
+    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Credential"   -Value ([pscredential]$null)
+    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Token"        -Value ([securestring]$null)
+    
 
+    # Repository object creation -----------------------------------------------
+    [pscustomobject]$repository = [pscustomobject]@{}
+    Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Domain"       -Value ([uri]$repositorySplat.Domain)
+    Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Organization" -Value ([string]$repositorySplat.Organization)
+    Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Name"         -Value ([string]$repositorySplat.Name)
+    Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Branch"       -Value ([string]$repositorySplat.Branch)
+    Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Token"        -Value ([securestring]$null)
+    Add-Member -InputObject $repository -MemberTYpe 'NoteProperty'   -Name "Path"         -Value ([IO.DirectoryInfo]$PWD.Path)
+    Add-Member -InputObject $repository -MemberType 'ScriptProperty' -Name "FullName"     -Value ([scriptblock]{
+        [IO.DirectoryInfo]$output = [IO.Path]::Join( [string[]]@($this.Directory, $this.Name) )
+        return $output
+    })
+    Add-Member -InputObject $repository -MemberType 'ScriptProperty' -Name "Uri"          -Value ([scriptblock]{
+        [uri]$output = [uri]::new($this.Domain, @($this.Organization, $this.Name) -join "/")
+        return $output
+    })
+   
+
+    # Manual login -------------------------------------------------------------
     if ($Refresh.IsPresent -or
         [string]::IsNullOrWhiteSpace($configData.Vault.UserName) -or 
         [string]::IsNullOrWhiteSpace($configData.Vault.Password)) {
 
         do {
-            # Infisical manual login
-            Write-Information -MessageData "Insufficient login information. Please complete manual login:"
-            infisical `
-                login `
-                --domain $vaultSplat.Domain.AbsoluteUri `
-                --silent
+            Write-Information -MessageData "Please complete manual login to $($vault.Domain.Host):"
+            $vault.Token = `
+                infisical `
+                    login `
+                    --domain $vaultSplat.Domain.AbsoluteUri `
+                    --silent |
+                ConvertTo-SecureString `
+                    -AsPlainText
             if ($LASTEXITCODE -ne 0) {
-                Write-Host "Unable to login. Press anykey to continue or 'n' to abort login."
-                switch (Read-Host) {
-                    {@("no", "n") -icontains $PSItem} {
-                        throw "Login canceled by user."
-                    }
-                    default {
-                        continue
-                    }
+                Write-Host "Unable to login. Press any key to continue or 'n' to abort login."
+
+                if (( Read-Host ) -iin @("no", "n")) {
+                    throw "Login canceled by user request."
                 }
             }
             else {
+                Write-Information -MessageData "Successful login."
                 break
             }
         }
         while ($true)
 
-        Write-Information -MessageData "Successfull login."
+        Write-Information -MessageData "Retrieving project id from vault."
+        $vault.Project = `
+            infisical `
+                sm `
+                projects `
+                list `
+                --output=json |
+            ConvertFrom-Json `
+                -Depth 9 `
+                -AsHashtable |
+            ForEach-Object -Process {
+                if ($PSItem.name -eq $vaultSplat.ProjectName) {
+                    $vault.Project = $PSItem.id
+                }
+            }
+        if ($vault.Project -eq [guid]::Empty) {
+            throw "Project name not found in Vault."
+        }
+
 
         Write-Information -MessageData "Retrieving client id from vault."
         [string]$configData.Vault.UserName = infisical `
             sm secrets get "INFISICAL_CLIENT_ID_DEPLOYMENT_READONLY" `
-            --domain $vaultSplat.Domain.AbsoluteUri `
-            --projectId $vaultSplat.Project `
+            --domain $vault.Domain.AbsoluteUri `
+            --projectId $vault.Project `
             --path "/" `
             --telemetry=false `
             --plain `
@@ -152,8 +187,8 @@ try {
         Write-Information -MessageData "Retrieving client secret from vault."
         [string]$configData.Vault.Password = infisical `
             sm secrets get "INFISICAL_CLIENT_SECRET_DEPLOYMENT_READONLY" `
-            --domain $vaultSplat.Domain.AbsoluteUri `
-            --projectId $vaultSplat.Project `
+            --domain $vault.Domain.AbsoluteUri `
+            --projectId $vault.Project `
             --path "/" `
             --telemetry=false `
             --plain `
@@ -174,21 +209,28 @@ try {
             throw "Command finished with exit code: $LASTEXITCODE."
         }
     }
+    
+    # Vault credential ---------------------------------------------------------
+    $vault.Credential = `
+        New-Object `
+            -TypeName "System.Management.Automation.PSCredential" `
+            -ArgumentList @(
+                $configData.Vault.UserName
+                ConvertTo-SecureString -String $configData.Vault.Password -AsPlainText
+            )
+            -ErrorAction 'Stop'
 
-    $splat = @{
-        TypeName     = "System.Management.Automation.PSCredential"
-        ArgumentList = @(
-            $configData.Vault.UserName
-            ConvertTo-SecureString -String $configData.Vault.Password -AsPlainText
-        )
-    }
-    [pscredential]$vaultSplat.Credential = New-Object @splat -ErrorAction 'Stop'
-
-
-    # Infisical machine login
+    # Infisical machine login --------------------------------------------------
     Write-Information -MessageData "Connecting with vault."
-    New-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -Value $true -Force | Out-Null
-    New-Item -Path "Env:\INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" -Value $vaultSplat.Credential.GetNetworkCredential().Password -Force | Out-Null
+    New-Item `
+        -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" `
+        -Value $true `
+        -Force |
+    Out-Null
+
+    New-Item `
+        -Path "Env:\INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" `
+        -Value $vaultSplat.Credential.GetNetworkCredential().Password -Force | Out-Null
     try {
         [string]$configData.Vault.Token = infisical `
                 login `
@@ -278,7 +320,7 @@ try {
         Set-Content -Path $configFile -Value (ConvertTo-Json -InputObject $configData -Depth 9) -ErrorAction 'Continue'
     }
 
-    
+    [IO.FileInfo]$repositoryBackup = ($repositorySplat.FullName.FullName + ".bak")
     # prepare for repository clonning
     if (Test-Path -Path $repositorySplat.Path -PathType 'Any') {
         Write-Information -MessageData "Backup up local resources."
