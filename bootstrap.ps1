@@ -191,6 +191,7 @@ try {
             -AsHashtable |
         ForEach-Object `
             -Process {
+                write-host "object:"
                 $PSItem | Out-String
                 switch ($PSItem.secretKey) {
                     "INFISICAL_CLIENT_ID_DEPLOYMENT_READONLY" {
@@ -206,6 +207,7 @@ try {
                         throw "Unexpected secret."
                     }
                 }
+                write-Host "success"
             }
         if ($LASTEXITCODE -ne 0) {
             throw "Unable to retrieve UserName from vault. Please check vault configuration."
