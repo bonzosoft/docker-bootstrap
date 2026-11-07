@@ -224,6 +224,8 @@ try {
             ) `
             -ErrorAction 'Stop'
 
+    $vault | Out-String
+    
     # Infisical machine login --------------------------------------------------
     Write-Information -MessageData "Connecting with vault."
     New-Item `
