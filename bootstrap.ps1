@@ -191,6 +191,7 @@ try {
             -AsHashtable |
         ForEach-Object `
             -Process {
+                $PSItem | Out-String
                 switch ($PSItem.secretKey) {
                     "INFISICAL_CLIENT_ID_DEPLOYMENT_READONLY" {
                         $configData.Vault.UserName = $PSItem.secretValue
