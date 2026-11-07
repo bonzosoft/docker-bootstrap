@@ -217,7 +217,7 @@ try {
             throw "Unable to retrieve UserName from vault. Please check vault configuration."
         }
 
-        $vault
+        $vault | Format-List *
 
         # Infisical logout
         Write-Information -MessageData "Discarding manual login session."
