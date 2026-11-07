@@ -104,13 +104,15 @@ try {
     [pscustomobject]$vault = [pscustomobject]@{}
     Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Domain"       -Value ([uri]$vaultSplat.Domain)
     Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Project"      -Value ([OrderedHashtable]@{
-        Id   = [guid]::Empty
-        Name = [string]$vaultSplat.ProjectName
+        Id          = [guid]::Empty
+        Name        = [string]$vaultSplat.ProjectName
+        Environment = [string]$vaultSplat.Environment
     })
-    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Environment"  -Value ([string]$vaultSplat.Environment)
-    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Credential"   -Value ([pscredential]$null)
-    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Token"        -Value ([securestring]$null)
-    
+    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Credential"   -Value ([OrderedHashtable]@{
+        UserName = [guid]::Empty
+        Password = [securestring]$null
+        Token    = [securestring]$null
+    })
 
     # Repository object creation -----------------------------------------------
     [pscustomobject]$repository = [pscustomobject]@{}
@@ -137,12 +139,14 @@ try {
 
         do {
             Write-Information -MessageData "Please complete manual login to $($vault.Domain.Host):"
-            $vault.Token = `
+            $vault.Credential.Token = `
                 infisical `
                     login `
                     --domain $vault.Domain.AbsoluteUri `
                     --silent `
-                    --plain
+                    --plain |
+                ConvertTo-SecureString `
+                    -AsPlainText
             if ($LASTEXITCODE -ne 0) {
                 Write-Host "Unable to login. Press any key to continue or 'n' to abort login."
 
@@ -184,6 +188,7 @@ try {
             "INFISICAL_CLIENT_SECRET_DEPLOYMENT_READONLY" `
             --domain $vault.Domain.AbsoluteUri `
             --projectId $vault.Project.Id `
+            --env $vault.Project.Environment `
             --path "/" `
             --output json `
             --telemetry=false |
@@ -192,8 +197,6 @@ try {
         ForEach-Object `
             -Process {
                 $item = $PSItem
-                write-host "object:"
-                $PSItem | Out-String
                 
                 switch ($item.secretKey) {
                     "INFISICAL_CLIENT_ID_DEPLOYMENT_READONLY" {
@@ -209,32 +212,12 @@ try {
                         throw "Unexpected secret."
                     }
                 }
-                write-Host "success"
             }
         if ($LASTEXITCODE -ne 0) {
             throw "Unable to retrieve UserName from vault. Please check vault configuration."
         }
 
         $vault | Out-String
-        #if ([string]::IsNullOrWhiteSpace($configData.Vault.UserName)) {
-        #    throw "Empty UserName. Please check vault configuration."
-        #}
-
-        #Write-Information -MessageData "Retrieving client secret from vault."
-        #[string]$configData.Vault.Password = infisical `
-        #    sm secrets get "INFISICAL_CLIENT_SECRET_DEPLOYMENT_READONLY" `
-        #    --domain $vault.Domain.AbsoluteUri `
-        #    --projectId $vault.Project.Id `
-        #    --path "/" `
-        #    --telemetry=false `
-        #    --plain `
-        #    --silent
-        #if ($LASTEXITCODE -ne 0) {
-        #    throw "Unable to retrieve Password from vault. Please check vault configuration."
-        #}
-        #if ([string]::IsNullOrWhiteSpace($configData.Vault.Password)) {
-        #    throw "Empty Password. Please check vault configuration."
-        #}
 
         # Infisical logout
         Write-Information -MessageData "Discarding manual login session."
