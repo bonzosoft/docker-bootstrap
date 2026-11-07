@@ -189,7 +189,9 @@ try {
             --telemetry=false |
         ForEach-Object `
             -Process {
-                [OrderedHashtable]$data = ConvertFrom-Json -InputObject $PSItem -AsHashtable
+                $data = ConvertFrom-Json `
+                    -InputObject $PSItem `
+                    -AsHashtable
                 
                 write-Host $data | Out-String 
                 switch ($data.secretKey) {
