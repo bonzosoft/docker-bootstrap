@@ -172,6 +172,7 @@ try {
             throw "Project name not found in Vault."
         }
 
+        Write-Information -MessageData ("Retrieved project id: " + $vault.Project)
 
         Write-Information -MessageData "Retrieving client id from vault."
         [string]$configData.Vault.UserName = infisical `
