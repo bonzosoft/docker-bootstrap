@@ -187,14 +187,11 @@ try {
             --path "/" `
             --output json `
             --telemetry=false |
+        ConvertFrom-Json `
+            -AsHashtable |
         ForEach-Object `
             -Process {
-                $data = ConvertFrom-Json `
-                    -InputObject $PSItem `
-                    -AsHashtable
-                
-                write-Host $data | Out-String 
-                switch ($data.secretKey) {
+                switch ($PSItem.secretKey) {
                     "INFISICAL_CLIENT_ID_DEPLOYMENT_READONLY" {
                         $configData.Vault.UserName = $PSItem.secretValue
                     }
