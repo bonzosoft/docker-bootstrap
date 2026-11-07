@@ -138,7 +138,8 @@ try {
                 infisical `
                     login `
                     --domain $vaultSplat.Domain.AbsoluteUri `
-                    --silent
+                    --silent `
+                    --plain
             if ($LASTEXITCODE -ne 0) {
                 Write-Host "Unable to login. Press any key to continue or 'n' to abort login."
 
@@ -225,7 +226,7 @@ try {
             -ErrorAction 'Stop'
 
     $vault | Out-String
-    
+
     # Infisical machine login --------------------------------------------------
     Write-Information -MessageData "Connecting with vault."
     New-Item `
@@ -236,14 +237,14 @@ try {
 
     New-Item `
         -Path "Env:\INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" `
-        -Value $vaultSplat.Credential.GetNetworkCredential().Password -Force |
+        -Value $vault.Credential.GetNetworkCredential().Password -Force |
     Out-Null
     try {
         [string]$configData.Vault.Token = infisical `
                 login `
-                --domain $vaultSplat.Domain.AbsoluteUri `
+                --domain $vault.Domain.AbsoluteUri `
                 --method=universal-auth `
-                --client-id $vaultSplat.Credential.GetNetworkCredential().UserName `
+                --client-id $vault.Credential.GetNetworkCredential().UserName `
                 --telemetry=false `
                 --plain `
                 --silent
@@ -254,7 +255,7 @@ try {
             throw "Unexpected error: empty vault token."
         }
         else {
-            [securestring]$vaultSplat.Token = ConvertTo-SecureString -String $configData.Vault.Token -AsPlainText
+            [securestring]$vault.Token = ConvertTo-SecureString -String $configData.Vault.Token -AsPlainText
         }
     }
     finally {
@@ -271,10 +272,10 @@ try {
         [string]$configData.Git.Token = infisical `
                 sm secrets `
                 get "GITHUB_TOKEN_AST_BONZOSOFT_READONLY_ALL" `
-                --domain $vaultSplat.Domain.AbsoluteUri `
-                --projectId $vaultSplat.Project `
+                --domain $vault.Domain.AbsoluteUri `
+                --projectId $vault.Project `
                 --path "/" `
-                --env $vaultSplat.Environment `
+                --env $vault.Environment `
                 --telemetry=false `
                 --plain `
                 --silent
@@ -285,7 +286,7 @@ try {
             throw "Empty Git token. Please check vault configuration."
         }
         else {
-            [securestring]$repositorySplat.Token = ConvertTo-SecureString -String $configData.Git.Token -AsPlainText
+            [securestring]$repository.Token = ConvertTo-SecureString -String $configData.Git.Token -AsPlainText
         }
     }
     finally {
@@ -296,10 +297,10 @@ try {
     # add login information to credential helper
     Write-Information -MessageData "Adding credential data to cache."
     @(
-        ("protocol=" + $repositorySplat.Domain.Scheme)
-        ("host=" + $repositorySplat.Domain.Authority)
+        ("protocol=" + $repository.Domain.Scheme)
+        ("host=" + $repository.Domain.Authority)
         ("username=" + "x-access-token")
-        ("password=" + (ConvertFrom-SecureString -SecureString $repositorySplat.Token -AsPlainText))
+        ("password=" + (ConvertFrom-SecureString -SecureString $repository.Token -AsPlainText))
     ) |
     git `
         -c credential.helper=cache `
@@ -317,7 +318,7 @@ try {
         -c credential.interactive=false `
         ls-remote `
         --exit-code `
-        $repositorySplat.Uri.AbsoluteUri
+        $repository.Uri.AbsoluteUri
     if ($LASTEXITCODE -ne 0) {
         throw "Invalid repository credential. Please Check vault configuration."
     }
@@ -327,14 +328,14 @@ try {
         Set-Content -Path $configFile -Value (ConvertTo-Json -InputObject $configData -Depth 9) -ErrorAction 'Continue'
     }
 
-    [IO.FileInfo]$repositoryBackup = ($repositorySplat.FullName.FullName + ".bak")
+    [IO.FileInfo]$repositoryBackup = ($repository.FullName.FullName + ".bak")
     # prepare for repository clonning
-    if (Test-Path -Path $repositorySplat.Path -PathType 'Any') {
+    if (Test-Path -Path $repository.Path -PathType 'Any') {
         Write-Information -MessageData "Backup up local resources."
         if (Test-Path -Path $repositoryBackup -PathType 'Any') {
             Remove-Item -Path $repositoryBackup -Force -Recurse
         }
-        Move-Item -Path $repositorySplat.Path -Destination $repositoryBackup -Force
+        Move-Item -Path $repository.Path -Destination $repositoryBackup -Force
     }
 
     # clone repository
@@ -343,17 +344,17 @@ try {
         -c credential.helper=cache `
         -c credential.interactive=false `
         clone `
-        --branch $repositorySplat.Branch `
+        --branch $repository.Branch `
         --depth 1 `
         --recurse-submodules `
         --shallow-submodules `
-        $repositorySplat.Uri.AbsoluteUri
+        $repository.Uri.AbsoluteUri
     if ($LASTEXITCODE -ne 0) {
-        if (Test-Path -Path $repositorySplat.Path -PathType 'Any') {
-            Remove-Item -Path $repositorySplat.Path -Force -Recurse
+        if (Test-Path -Path $repository.Path -PathType 'Any') {
+            Remove-Item -Path $repository.Path -Force -Recurse
         }
-        Move-Item -Path $repositoryBackup -Destination $repositorySplat.Path -Force
-        throw "An error occurred while cloning $($repositorySplat.Name). Command finished with exit code: $LASTEXITCODE."
+        Move-Item -Path $repositoryBackup -Destination $repository.Path -Force
+        throw "An error occurred while cloning $($repository.Name). Command finished with exit code: $LASTEXITCODE."
     }
     else {
         if (Test-Path -Path $repositoryBackup -PathType 'Any') {
@@ -362,7 +363,7 @@ try {
     }
 
     foreach ($item in @("pwsh")) {
-        [IO.FIleInfo]$source = Join-Path -Path ([IO.FileInfo]$PWD.Path) -ChildPath @($repositorySplat.Name, "${item}.sh")
+        [IO.FIleInfo]$source = Join-Path -Path ([IO.FileInfo]$PWD.Path) -ChildPath @($repository.Name, "${item}.sh")
         [IO.FIleInfo]$target = Join-Path -Path ([IO.FileInfo]$PWD.Path) -ChildPath @($item)
     
         if (Test-Path -Path $source -PathType 'Leaf') {
