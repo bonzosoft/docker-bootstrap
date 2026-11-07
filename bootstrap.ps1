@@ -234,7 +234,8 @@ try {
 
     New-Item `
         -Path "Env:\INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" `
-        -Value $vaultSplat.Credential.GetNetworkCredential().Password -Force | Out-Null
+        -Value $vaultSplat.Credential.GetNetworkCredential().Password -Force |
+    Out-Null
     try {
         [string]$configData.Vault.Token = infisical `
                 login `
