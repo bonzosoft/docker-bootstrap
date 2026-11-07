@@ -165,15 +165,12 @@ try {
                 -AsHashtable |
             ForEach-Object -Process {
                 if ($PSItem.name -eq $vaultSplat.ProjectName) {
-                    Write-Host "projectid: $($PSItem.id)"
                     return $PSItem.id
                 }
             }
         if ($vault.Project -eq [guid]::Empty) {
             throw "Project name not found in Vault."
         }
-
-        Write-Information -MessageData ("Retrieved project id: " + $vault.Project)
 
         Write-Information -MessageData "Retrieving client id from vault."
         [string]$configData.Vault.UserName = infisical `
@@ -224,7 +221,7 @@ try {
             -ArgumentList @(
                 $configData.Vault.UserName
                 ConvertTo-SecureString -String $configData.Vault.Password -AsPlainText
-            )
+            ) `
             -ErrorAction 'Stop'
 
     # Infisical machine login --------------------------------------------------
