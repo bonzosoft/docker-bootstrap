@@ -189,8 +189,10 @@ try {
             --telemetry=false |
         ForEach-Object `
             -Process {
-                $PSItem | Out-String
-                switch ($PSItem.secretKey) {
+                [OrderedHashtable]$data = ConvertFrom-Json -InputObject $PSItem -AsHashtable
+                
+                write-Host $data | Out-String 
+                switch ($data.secretKey) {
                     "INFISICAL_CLIENT_ID_DEPLOYMENT_READONLY" {
                         $configData.Vault.UserName = $PSItem.secretValue
                     }
