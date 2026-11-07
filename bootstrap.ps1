@@ -103,7 +103,10 @@ try {
     # Vault object creation ----------------------------------------------------
     [pscustomobject]$vault = [pscustomobject]@{}
     Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Domain"       -Value ([uri]$vaultSplat.Domain)
-    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Project"      -Value ([guid]::Empty)
+    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Project"      -Value ([OrderedHashtable]@{
+        Id   = [guid]::Empty
+        Name = [string]$vaultSplat.ProjectName
+    })
     Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Environment"  -Value ([string]$vaultSplat.Environment)
     Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Credential"   -Value ([pscredential]$null)
     Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Token"        -Value ([securestring]$null)
@@ -137,7 +140,7 @@ try {
             $vault.Token = `
                 infisical `
                     login `
-                    --domain $vaultSplat.Domain.AbsoluteUri `
+                    --domain $vault.Domain.AbsoluteUri `
                     --silent `
                     --plain
             if ($LASTEXITCODE -ne 0) {
@@ -155,7 +158,7 @@ try {
         while ($true)
 
         Write-Information -MessageData "Retrieving project id from vault."
-        $vault.Project = `
+        $vault.Project.Id = `
             infisical `
                 sm `
                 projects `
@@ -165,11 +168,11 @@ try {
                 -Depth 9 `
                 -AsHashtable |
             ForEach-Object -Process {
-                if ($PSItem.name -eq $vaultSplat.ProjectName) {
+                if ($PSItem.name -eq $vault.Project.Name) {
                     return $PSItem.id
                 }
             }
-        if ($vault.Project -eq [guid]::Empty) {
+        if ($vault.Project.Id -eq [guid]::Empty) {
             throw "Project name not found in Vault."
         }
 
@@ -193,7 +196,7 @@ try {
         [string]$configData.Vault.Password = infisical `
             sm secrets get "INFISICAL_CLIENT_SECRET_DEPLOYMENT_READONLY" `
             --domain $vault.Domain.AbsoluteUri `
-            --projectId $vault.Project `
+            --projectId $vault.Project.Id `
             --path "/" `
             --telemetry=false `
             --plain `
@@ -267,13 +270,13 @@ try {
     # Get/Update Github Token
     Write-Information -MessageData "Retrieving repository access token."
     New-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -Value $true -Force | Out-Null
-    New-Item -Path "Env:\INFISICAL_TOKEN" -Value (ConvertFrom-SecureString -SecureString $vaultSplat.Token -AsPlainText) -Force | Out-Null
+    New-Item -Path "Env:\INFISICAL_TOKEN" -Value (ConvertFrom-SecureString -SecureString $vault.Token -AsPlainText) -Force | Out-Null
     try {
         [string]$configData.Git.Token = infisical `
                 sm secrets `
                 get "GITHUB_TOKEN_AST_BONZOSOFT_READONLY_ALL" `
                 --domain $vault.Domain.AbsoluteUri `
-                --projectId $vault.Project `
+                --projectId $vault.Project.Id `
                 --path "/" `
                 --env $vault.Environment `
                 --telemetry=false `
