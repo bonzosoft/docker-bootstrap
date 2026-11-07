@@ -181,7 +181,7 @@ try {
         [string]$configData.Vault.UserName = infisical `
             sm secrets get "INFISICAL_CLIENT_ID_DEPLOYMENT_READONLY" `
             --domain $vault.Domain.AbsoluteUri `
-            --projectId $vault.Project `
+            --projectId $vault.Project.Id `
             --path "/" `
             --telemetry=false `
             --plain `
