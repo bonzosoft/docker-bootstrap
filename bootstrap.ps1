@@ -163,7 +163,8 @@ try {
                 sm `
                 projects `
                 list `
-                --output=json |
+                --output=json `
+                --telemetry=false |
             ConvertFrom-Json `
                 -Depth 9 `
                 -AsHashtable |
@@ -184,9 +185,8 @@ try {
             --domain $vault.Domain.AbsoluteUri `
             --projectId $vault.Project.Id `
             --path "/" `
-            --telemetry=false `
-            --plain `
-            --silent |
+            --output json `
+            --telemetry=false |
         ForEach-Object `
             -Process {
                 $PSItem | Out-String
@@ -264,7 +264,8 @@ try {
         -Value $vault.Credential.GetNetworkCredential().Password -Force |
     Out-Null
     try {
-        [string]$configData.Vault.Token = infisical `
+        [string]$configData.Vault.Token = `
+            infisical `
                 login `
                 --domain $vault.Domain.AbsoluteUri `
                 --method=universal-auth `
@@ -293,7 +294,8 @@ try {
     New-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -Value $true -Force | Out-Null
     New-Item -Path "Env:\INFISICAL_TOKEN" -Value (ConvertFrom-SecureString -SecureString $vault.Token -AsPlainText) -Force | Out-Null
     try {
-        [string]$configData.Git.Token = infisical `
+        [string]$configData.Git.Token = `
+            infisical `
                 sm secrets `
                 get "GITHUB_TOKEN_AST_BONZOSOFT_READONLY_ALL" `
                 --domain $vault.Domain.AbsoluteUri `
