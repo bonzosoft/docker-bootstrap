@@ -3,7 +3,10 @@
 
 using namespace System.Management.Automation # OrderedHashtable, PSCredential
 
-
+<#
+    .NOTES
+        Author: bonzosoft © 2026
+#>
 [CmdletBinding()]
 [OutputType([void])]
 param(
@@ -34,7 +37,7 @@ try {
 
 
     # Vault information --------------------------------------------------------
-    [OrderedHashtable[]]$vaultSplat = [OrderedHashtable]@{
+    [OrderedHashtable]$vaultSplat = [OrderedHashtable]@{
         Domain      = [uri]"https://eu.infisical.com"
         ProjectName = [string]"containers"
         Environment = [string]"dev"
@@ -61,8 +64,9 @@ try {
         $configFile.Create().Dispose()
     }
 
+    [OrderedHashtable]$configData = [OrderedHashtable]@{}
     if ($configFile.Length -ne 0) {
-        [OrderedHashtable]$configData = `
+        $configData = `
             Get-Content `
                 -Path $configFile `
                 -Raw `
