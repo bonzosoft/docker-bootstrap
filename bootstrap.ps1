@@ -138,9 +138,7 @@ try {
                 infisical `
                     login `
                     --domain $vaultSplat.Domain.AbsoluteUri `
-                    --silent |
-                ConvertTo-SecureString `
-                    -AsPlainText
+                    --silent
             if ($LASTEXITCODE -ne 0) {
                 Write-Host "Unable to login. Press any key to continue or 'n' to abort login."
 
