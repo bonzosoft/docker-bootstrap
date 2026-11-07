@@ -207,6 +207,8 @@ try {
         if ($LASTEXITCODE -ne 0) {
             throw "Unable to retrieve UserName from vault. Please check vault configuration."
         }
+
+        $vault | Out-String
         #if ([string]::IsNullOrWhiteSpace($configData.Vault.UserName)) {
         #    throw "Empty UserName. Please check vault configuration."
         #}
@@ -412,7 +414,7 @@ try {
 }
 catch {
     Write-Error -ErrorRecord $PSItem -ErrorAction 'Continue'
-    Write-Error -Exception $PSItem.Exception -ErrorAction 'Continue'
+    #Write-Error -Exception $PSItem.Exception -ErrorAction 'Continue'
     Write-Error -Message $PSItem.ScriptStackTrace -ErrorAction 'Continue'
     exit 1
 }
