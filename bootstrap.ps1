@@ -165,6 +165,7 @@ try {
                 -AsHashtable |
             ForEach-Object -Process {
                 if ($PSItem.name -eq $vaultSplat.ProjectName) {
+                    Write-Host "projectid: $($PSItem.id)"
                     $vault.Project = $PSItem.id
                 }
             }
