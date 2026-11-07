@@ -176,38 +176,56 @@ try {
             throw "Project name not found in Vault."
         }
 
-        Write-Host ($vault | Out-String)
         Write-Information -MessageData "Retrieving client id from vault."
-        [string]$configData.Vault.UserName = infisical `
-            sm secrets get "INFISICAL_CLIENT_ID_DEPLOYMENT_READONLY" `
+        infisical `
+            sm secrets get `
+            "INFISICAL_CLIENT_ID_DEPLOYMENT_READONLY" `
+            "INFISICAL_CLIENT_SECRET_DEPLOYMENT_READONLY" `
             --domain $vault.Domain.AbsoluteUri `
             --projectId $vault.Project.Id `
             --path "/" `
             --telemetry=false `
             --plain `
-            --silent
+            --silent |
+        ForEach-Object `
+            -Process {
+                switch ($PSItem.secretKey) {
+                    "INFISICAL_CLIENT_ID_DEPLOYMENT_READONLY" {
+                        $configData.Vault.UserName = $PSItem.secretValue
+                    }
+                    "INFISICAL_CLIENT_SECRET_DEPLOYMENT_READONLY" {
+                        $configData.Vault.Password = `
+                            ConvertTo-SecureString `
+                                -String $PSItem.secretValue `
+                                -AsPlainText
+                    }
+                    default {
+                        throw "Unexpected secret."
+                    }
+                }
+            }
         if ($LASTEXITCODE -ne 0) {
             throw "Unable to retrieve UserName from vault. Please check vault configuration."
         }
-        if ([string]::IsNullOrWhiteSpace($configData.Vault.UserName)) {
-            throw "Empty UserName. Please check vault configuration."
-        }
+        #if ([string]::IsNullOrWhiteSpace($configData.Vault.UserName)) {
+        #    throw "Empty UserName. Please check vault configuration."
+        #}
 
-        Write-Information -MessageData "Retrieving client secret from vault."
-        [string]$configData.Vault.Password = infisical `
-            sm secrets get "INFISICAL_CLIENT_SECRET_DEPLOYMENT_READONLY" `
-            --domain $vault.Domain.AbsoluteUri `
-            --projectId $vault.Project.Id `
-            --path "/" `
-            --telemetry=false `
-            --plain `
-            --silent
-        if ($LASTEXITCODE -ne 0) {
-            throw "Unable to retrieve Password from vault. Please check vault configuration."
-        }
-        if ([string]::IsNullOrWhiteSpace($configData.Vault.Password)) {
-            throw "Empty Password. Please check vault configuration."
-        }
+        #Write-Information -MessageData "Retrieving client secret from vault."
+        #[string]$configData.Vault.Password = infisical `
+        #    sm secrets get "INFISICAL_CLIENT_SECRET_DEPLOYMENT_READONLY" `
+        #    --domain $vault.Domain.AbsoluteUri `
+        #    --projectId $vault.Project.Id `
+        #    --path "/" `
+        #    --telemetry=false `
+        #    --plain `
+        #    --silent
+        #if ($LASTEXITCODE -ne 0) {
+        #    throw "Unable to retrieve Password from vault. Please check vault configuration."
+        #}
+        #if ([string]::IsNullOrWhiteSpace($configData.Vault.Password)) {
+        #    throw "Empty Password. Please check vault configuration."
+        #}
 
         # Infisical logout
         Write-Information -MessageData "Discarding manual login session."
@@ -229,7 +247,6 @@ try {
             ) `
             -ErrorAction 'Stop'
 
-    $vault | Out-String
 
     # Infisical machine login --------------------------------------------------
     Write-Information -MessageData "Connecting with vault."
