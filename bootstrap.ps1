@@ -176,6 +176,7 @@ try {
             throw "Project name not found in Vault."
         }
 
+        Write-Host ($vault | Out-String)
         Write-Information -MessageData "Retrieving client id from vault."
         [string]$configData.Vault.UserName = infisical `
             sm secrets get "INFISICAL_CLIENT_ID_DEPLOYMENT_READONLY" `
