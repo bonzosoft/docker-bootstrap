@@ -11,6 +11,9 @@ using namespace System.Management.Automation # OrderedHashtable, PSCredential
 [OutputType([void])]
 param(
     [Parameter()]
+    [switch]$Force,
+
+    [Parameter()]
     [switch]$KeepCredential # keep git crednetials cache
 )
 
@@ -125,7 +128,7 @@ try {
    
 
     # Manual login -------------------------------------------------------------
-    if ($Refresh.IsPresent -or
+    if ($Force.IsPresent -or
         [string]::IsNullOrWhiteSpace($configData.Vault.UserName) -or 
         [string]::IsNullOrWhiteSpace($configData.Vault.Password)) {
 
