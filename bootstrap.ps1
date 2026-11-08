@@ -135,8 +135,7 @@ try {
         return $output
     })
     Add-Member -InputObject $repository -MemberType 'ScriptProperty' -Name "Uri"          -Value ([scriptblock]{
-        [uri]$output = [uri]::new($this.Domain, @($this.Organization, $this.Name) -join "/")
-        return $output
+        [uri]::new($this.Domain, @($this.Organization, $this.Name) -join "/")
     })
     Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Token"        -Value ( `
         if ([string]::IsNullOrWhiteSpace($configData.Git.Token)) {
