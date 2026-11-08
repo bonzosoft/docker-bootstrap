@@ -250,7 +250,7 @@ try {
         # Vault machine login --------------------------------------------------
         Write-Information -MessageData "Connecting with vault."
 
-        $vault.Token = `
+        $vault.Credential.Token = `
             infisical `
                 login `
                 --domain $vault.Domain.AbsoluteUri `
@@ -264,7 +264,7 @@ try {
         if ($LASTEXITCODE -ne 0) {
             throw "Unable to login using machine credentials. Please check vault configuration."
         }
-        if ([string]::IsNullOrWhiteSpace($vault.Token)) {
+        if ([string]::IsNullOrWhiteSpace($vault.Credential.Token)) {
             throw "Unexpected error: empty vault token."
         }
 
