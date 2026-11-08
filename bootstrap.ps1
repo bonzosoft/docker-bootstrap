@@ -32,7 +32,7 @@ try {
 
 
     # Script-wide variables ----------------------------------------------------
-    [OrderedHashtable]$splat = @{}
+    [OrderedHashtable]$splat = [OrderedHashtable]@{}
 
 
     # Configuration file path --------------------------------------------------
@@ -57,9 +57,12 @@ try {
 
 
     # Configuration validation -------------------------------------------------
-    Write-Information -MessageData "Reading local configuration."
+    Write-Information -MessageData "Reading stored information."
    
+    [OrderedHashtable]$configData = [OrderedHashtable]@{}
+
     $configFile.Refresh()
+
     if (-not $configFile.Directory.Exists) {
         $configFile.Directory.Create()
     }
@@ -67,7 +70,6 @@ try {
         $configFile.Create().Dispose()
     }
 
-    [OrderedHashtable]$configData = [OrderedHashtable]@{}
     if ($configFile.Length -ne 0) {
         $configData = `
             Get-Content `
@@ -101,7 +103,7 @@ try {
 
     
     # Vault object creation ----------------------------------------------------
-    [pscustomobject]$vault = [pscustomobject]@{}
+    [pscustomobject]$vault = New-Object -TypeName "System.Management.Automation.PSCustomObject"
     Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Domain"       -Value ([uri]$vaultSplat.Domain)
     Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Project"      -Value ([OrderedHashtable]@{
         Id          = [guid]::Empty
@@ -115,7 +117,7 @@ try {
     })
 
     # Repository object creation -----------------------------------------------
-    [pscustomobject]$repository = [pscustomobject]@{}
+    [pscustomobject]$repository = New-Object -TypeName "System.Management.Automation.PSCustomObject"
     Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Domain"       -Value ([uri]$repositorySplat.Domain)
     Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Organization" -Value ([string]$repositorySplat.Organization)
     Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Name"         -Value ([string]$repositorySplat.Name)
@@ -164,9 +166,8 @@ try {
         Write-Information -MessageData "Retrieving project id from vault."
         $vault.Project.Id = `
             infisical `
-                sm `
-                projects `
-                list `
+                sm projects list `
+                --domain $vault.Domain.AbsoluteUri `
                 --output=json `
                 --telemetry=false |
             ConvertFrom-Json `
@@ -228,31 +229,27 @@ try {
             throw "Command finished with exit code: $LASTEXITCODE."
         }
     }
-    
+
     # Vault credential ---------------------------------------------------------
-    $vault.Credential = `
-        New-Object `
-            -TypeName "System.Management.Automation.PSCredential" `
-            -ArgumentList @(
-                $configData.Vault.UserName
-                ConvertTo-SecureString -String $configData.Vault.Password -AsPlainText
-            ) `
-            -ErrorAction 'Stop'
+    $vault.Credential.UserName = $configData.Vault.Username
+    $vault.Credential.Password = $configData.Vault.Password
 
 
-    # Infisical machine login --------------------------------------------------
-    Write-Information -MessageData "Connecting with vault."
-    New-Item `
-        -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" `
-        -Value $true `
-        -Force |
-    Out-Null
-
+    # Vault operations ---------------------------------------------------------
     New-Item `
         -Path "Env:\INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" `
         -Value $vault.Credential.GetNetworkCredential().Password -Force |
     Out-Null
     try {
+        New-Item `
+            -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" `
+            -Value $true `
+            -Force |
+        Out-Null
+
+        # Vault machine login --------------------------------------------------
+        Write-Information -MessageData "Connecting with vault."
+
         [string]$configData.Vault.Token = `
             infisical `
                 login `
@@ -271,18 +268,10 @@ try {
         else {
             [securestring]$vault.Token = ConvertTo-SecureString -String $configData.Vault.Token -AsPlainText
         }
-    }
-    finally {
-        Remove-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -ErrorAction 'SilentlyContinue'
-        Remove-Item -Path "Env:\INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" -ErrorAction 'SilentlyContinue'
-    }
 
+        # Retrieve git token ---------------------------------------------------
+        Write-Information -MessageData "Retrieving repository access token."
 
-    # Get/Update Github Token
-    Write-Information -MessageData "Retrieving repository access token."
-    New-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -Value $true -Force | Out-Null
-    New-Item -Path "Env:\INFISICAL_TOKEN" -Value (ConvertFrom-SecureString -SecureString $vault.Token -AsPlainText) -Force | Out-Null
-    try {
         [string]$configData.Git.Token = `
             infisical `
                 sm secrets `
@@ -305,11 +294,16 @@ try {
         }
     }
     finally {
-        Remove-Item -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" -ErrorAction 'SilentlyContinue'
-        Remove-Item -Path "Env:\INFISICAL_TOKEN" -ErrorAction 'SilentlyContinue'
+        Remove-Item `
+            -Path "Env:\INFISICAL_DISABLE_UPDATE_CHECK" `
+            -ErrorAction 'SilentlyContinue'
+        Remove-Item `
+            -Path "Env:\INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" `
+            -ErrorAction 'SilentlyContinue'
     }
 
-    # add login information to credential helper
+
+    # add login information to credential helper -------------------------------
     Write-Information -MessageData "Adding credential data to cache."
     @(
         ("protocol=" + $repository.Domain.Scheme)
@@ -326,7 +320,8 @@ try {
         throw "Unable to validate repository credentials. Command finished with exit code: $LASTEXITCODE."
     }
 
-    # check repository credential
+
+    # check repository credential ----------------------------------------------
     Write-Information -MessageData "Checking obtained credential."
     git `
         -c credential.helper=cache `
@@ -343,8 +338,10 @@ try {
         Set-Content -Path $configFile -Value (ConvertTo-Json -InputObject $configData -Depth 9) -ErrorAction 'Continue'
     }
 
+    
+    # prepare for repository clonning ------------------------------------------
     [IO.FileInfo]$repositoryBackup = ($repository.FullName.FullName + ".bak")
-    # prepare for repository clonning
+
     if (Test-Path -Path $repository.Path -PathType 'Any') {
         Write-Information -MessageData "Backup up local resources."
         if (Test-Path -Path $repositoryBackup -PathType 'Any') {
@@ -352,8 +349,9 @@ try {
         }
         Move-Item -Path $repository.Path -Destination $repositoryBackup -Force
     }
+    
 
-    # clone repository
+    # clone repository ---------------------------------------------------------
     Write-Information -MessageData "Cloning repository."
     git `
         -c credential.helper=cache `
@@ -400,7 +398,6 @@ try {
             }
         }
     }
-    #Endregion
 
     exit 0
 }
@@ -411,7 +408,7 @@ catch {
     exit 1
 }
 finally {
-    # Remove cached repository credentials.
+    # Remove cached repository credentials -------------------------------------
     if (-not $KeepCredential.IsPresent) {
         Write-Information -MessageData "Removing cached repository credentials."
         @(
@@ -427,7 +424,6 @@ finally {
         if ($LASTEXITCODE -ne 0) {
             Write-Warning "Unable to remove cached repository credentials."
         }
-    
     } 
 
     # Script end ---------------------------------------------------------------
