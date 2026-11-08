@@ -191,7 +191,7 @@ try {
                 -Depth 9 `
                 -AsHashtable |
             ForEach-Object -Process {
-                if ($PSItem.name -eq $vault.Project.Name) {
+                if ($PSItem.name -eq $vault.ProjectName) {
                     return [guid]::Parse($PSItem.id)
                 }
             }
