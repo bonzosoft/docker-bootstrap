@@ -131,7 +131,7 @@ try {
     Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Branch"       -Value ([string]$repositorySplat.Branch)
     Add-Member -InputObject $repository -MemberTYpe 'NoteProperty'   -Name "Path"         -Value ([IO.DirectoryInfo]$PWD.Path)
     Add-Member -InputObject $repository -MemberType 'ScriptProperty' -Name "FullName"     -Value ([scriptblock]{
-        [IO.DirectoryInfo][IO.Path]::Join( [string[]]@($this.Directory, $this.Name) )
+        [IO.DirectoryInfo][IO.Path]::Join( [string[]]@($this.Path.FullName, $this.Name) )
     })
     Add-Member -InputObject $repository -MemberType 'ScriptProperty' -Name "Uri"          -Value ([scriptblock]{
         [uri]::new($this.Domain, @($this.Organization, $this.Name) -join "/")
