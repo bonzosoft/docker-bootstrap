@@ -202,7 +202,7 @@ try {
                 
                 switch ($item.secretKey) {
                     "INFISICAL_CLIENT_ID_DEPLOYMENT_READONLY" {
-                        $configData.Vault.UserName = $item.secretValue
+                        $configData.Vault.UserName = [guid]::Parse($item.secretValue)
                     }
                     "INFISICAL_CLIENT_SECRET_DEPLOYMENT_READONLY" {
                         $configData.Vault.Password = `
