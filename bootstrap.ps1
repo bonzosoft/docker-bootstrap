@@ -108,11 +108,22 @@ try {
     Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "ProjectName"  -Value ([string]$vaultSplat.ProjectName)
     Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "ProjectId"    -Value ([guid]::Empty)
     Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Environment"  -Value ([string]$vaultSplat.Environment)
-    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Credential"   -Value ([pscredential]::new( `
-        $configData.Vault.UserName, `
-        (ConvertTo-SecureString -String $configData.Vault.Password -AsPlainText)
-    ))
-
+    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Credential"   -Value ([pscustomobject]@{
+        UserName = `
+            if ([string]::IsNullOrWhiteSpace($configData.Vault.UserName)) {
+                [guid]::Empty
+            }
+            else {
+                [guid]::Parse($configData.Vault.UserName)
+            }
+        Password = `
+            if ([string]::IsNullOrWhiteSpace($configData.Vault.Password)) {
+                [securestring]@{}
+            }
+            else {
+                ConvertTo-SecureString -String $configData.Vault.Password -AsPlainText
+            }
+    })
 
     # Repository object creation -----------------------------------------------
     [pscustomobject]$repository = [pscustomobject]@{}
@@ -127,7 +138,16 @@ try {
     Add-Member -InputObject $repository -MemberType 'ScriptProperty' -Name "Uri"          -Value ([scriptblock]{
         [uri]::new($this.Domain, @($this.Organization, $this.Name) -join "/")
     })
-    Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Token"        -Value ([securestring]::new($configData.Git.Token))
+    Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Token"        -Value ([pscustomobject]@{
+        Token = `
+            if ([string]::IsNullOrWhiteSpace($configData.Git.Token)) {
+                [securestring]@{}
+            }
+            else {
+                ConvertTo-SecureString -String $configData.Git.Token -AsPlainText
+            }
+    })
+
 
     $vault | Format-List * | Out-String
     $repository | Format-List * | Out-String
