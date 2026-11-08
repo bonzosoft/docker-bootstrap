@@ -149,7 +149,7 @@ try {
             }
     })
 
-
+    write-host "pasa"
     # Manual login -------------------------------------------------------------
     if ($Force.IsPresent -or
         $vault.Credential.Username -eq [guid]::Empty -or 
