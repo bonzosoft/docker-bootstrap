@@ -279,7 +279,7 @@ try {
                 --domain $vault.Domain.AbsoluteUri `
                 --projectId $vault.Project.Id `
                 --path "/" `
-                --env $vault.Environment `
+                --env $vault.Project.Environment `
                 --telemetry=false `
                 --plain `
                 --silent |
