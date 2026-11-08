@@ -150,9 +150,6 @@ try {
     })
 
 
-
-    return
-
     # Manual login -------------------------------------------------------------
     if ($Force.IsPresent -or
         $vault.Credential.Username -eq [guid]::Empty -or 
