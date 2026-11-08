@@ -147,8 +147,8 @@ try {
     })
    
 
-    $vault
-    $repository
+    $vault | Out-String
+    $repository | Out-String
     return
 
     # Manual login -------------------------------------------------------------
