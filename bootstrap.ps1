@@ -147,9 +147,7 @@ try {
                     login `
                     --domain $vault.Domain.AbsoluteUri `
                     --silent `
-                    --plain |
-                ConvertTo-SecureString `
-                    -AsPlainText
+                    --plain
             if ($LASTEXITCODE -ne 0) {
                 Write-Host "Unable to login. Press any key to continue or 'n' to abort login."
 
@@ -235,6 +233,13 @@ try {
     # Vault credential ---------------------------------------------------------
     $vault | Format-List *
     $configData | Format-List *
+
+    $configData.Vault
+    write-host "uno"
+    $vault.Credential.Username
+    write-host "dos"
+    $configData.Vault.Username
+    write-host "tres"
     $vault.Credential.UserName = $configData.Vault.Username
     $vault.Credential.Password = $configData.Vault.Password
 
