@@ -111,18 +111,19 @@ try {
     Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Credential"   -Value ([pscustomobject]@{
         UserName = `
             if ([string]::IsNullOrWhiteSpace($configData.Vault.UserName)) {
-                [guid]::Empty
+                return [guid]::Empty
             }
             else {
-                [guid]::Parse($configData.Vault.UserName)
+                return [guid]::Parse($configData.Vault.UserName)
             }
         Password = `
             if ([string]::IsNullOrWhiteSpace($configData.Vault.Password)) {
-                [securestring]@{}
+                return [securestring]@{}
             }
             else {
-                ConvertTo-SecureString -String $configData.Vault.Password -AsPlainText
+                return ConvertTo-SecureString -String $configData.Vault.Password -AsPlainText
             }
+        Token = [securestring]@{}
     })
 
     # Repository object creation -----------------------------------------------
@@ -141,23 +142,21 @@ try {
     Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Token"        -Value ([pscustomobject]@{
         Token = `
             if ([string]::IsNullOrWhiteSpace($configData.Git.Token)) {
-                [securestring]@{}
+                return [securestring]@{}
             }
             else {
-                ConvertTo-SecureString -String $configData.Git.Token -AsPlainText
+                return ConvertTo-SecureString -String $configData.Git.Token -AsPlainText
             }
     })
 
 
-    $vault | Format-List * | Out-String
-    $repository | Format-List * | Out-String
 
     return
 
     # Manual login -------------------------------------------------------------
     if ($Force.IsPresent -or
-        [string]::IsNullOrWhiteSpace($configData.Vault.UserName) -or 
-        [string]::IsNullOrWhiteSpace($configData.Vault.Password)) {
+        $vault.Credential.Username -eq [guid]::Empty -or 
+        $vault.Credential.Password.Length -eq 0) {
 
         do {
             Write-Information -MessageData "Please complete manual login to $($vault.Domain.Host):"
@@ -184,7 +183,7 @@ try {
         while ($true)
 
         Write-Information -MessageData "Retrieving project id from vault."
-        $vault.Project.Id = `
+        $vault.ProjectId = `
             infisical `
                 sm projects list `
                 --domain $vault.Domain.AbsoluteUri `
@@ -195,10 +194,10 @@ try {
                 -AsHashtable |
             ForEach-Object -Process {
                 if ($PSItem.name -eq $vault.Project.Name) {
-                    return $PSItem.id
+                    return [guid]::Parse($PSItem.id)
                 }
             }
-        if ($vault.Project.Id -eq [guid]::Empty) {
+        if ($vault.ProjectId -eq [guid]::Empty) {
             throw "Project name not found in Vault."
         }
 
@@ -208,8 +207,8 @@ try {
             "INFISICAL_CLIENT_ID_DEPLOYMENT_READONLY" `
             "INFISICAL_CLIENT_SECRET_DEPLOYMENT_READONLY" `
             --domain $vault.Domain.AbsoluteUri `
-            --projectId $vault.Project.Id `
-            --env $vault.Project.Environment `
+            --projectId $vault.ProjectId `
+            --env $vault.Environment `
             --path "/" `
             --output json `
             --telemetry=false `
@@ -222,10 +221,10 @@ try {
                 
                 switch ($item.secretKey) {
                     "INFISICAL_CLIENT_ID_DEPLOYMENT_READONLY" {
-                        $configData.Vault.UserName = $item.secretValue
+                        $vault.Credential.UserName = [guid]::Parse($item.secretValue)
                     }
                     "INFISICAL_CLIENT_SECRET_DEPLOYMENT_READONLY" {
-                        $configData.Vault.Password = $item.secretValue
+                        $vault.Credential.Password = $item.secretValue | ConvertTo-SecureString -AsPlainText
                     }
                     default {
                         throw "Unexpected secret."
@@ -248,9 +247,11 @@ try {
         }
     }
 
+
     # Vault credential ---------------------------------------------------------
-    $vault.Credential.UserName = [guid]::Parse($configData.Vault.UserName)
-    $vault.Credential.Password = ConvertTo-SecureString -String $configData.Vault.Password -AsPlainText
+    $configData.Vault.UserName = $vault.Credential.UserName
+    $configData.Vault.Password = $vault.Credential.Password | ConvertFrom-SecureString -AsPlainText
+    Set-Content -Path $configFile -Value (ConvertTo-Json -InputObject $configData -Depth 9) -ErrorAction 'Continue'
 
 
     # Vault operations ---------------------------------------------------------
@@ -283,7 +284,7 @@ try {
         if ($LASTEXITCODE -ne 0) {
             throw "Unable to login using machine credentials. Please check vault configuration."
         }
-        if ([string]::IsNullOrWhiteSpace($vault.Credential.Token)) {
+        if ($vault.Credential.Token.Length -eq 0) {
             throw "Unexpected error: empty vault token."
         }
 
@@ -296,9 +297,9 @@ try {
                 sm secrets `
                 get "GITHUB_TOKEN_AST_BONZOSOFT_READONLY_ALL" `
                 --domain $vault.Domain.AbsoluteUri `
-                --projectId $vault.Project.Id `
+                --projectId $vault.ProjectId `
                 --path "/" `
-                --env $vault.Project.Environment `
+                --env $vault.Environment `
                 --telemetry=false `
                 --plain `
                 --silent |
@@ -307,7 +308,7 @@ try {
         if ($LASTEXITCODE -ne 0) {
             throw "Unable to retrieve Github token. Please check vault configuration."
         }
-        if ([string]::IsNullOrWhiteSpace($repository.Token)) {
+        if ($repository.Token.Length -eq 0) {
             throw "Empty Git token. Please check vault configuration."
         }
     }
