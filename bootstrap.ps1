@@ -105,19 +105,19 @@ try {
     # Vault object creation ----------------------------------------------------
     [pscustomobject]$vault = [pscustomobject]@{}
     Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Domain"       -Value ([uri]$vaultSplat.Domain)
-    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Project"      -Value ([OrderedHashtable]@{
+    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Project"      -Value ([pscutsomobject]@{
         Id          = [string]""
         Name        = [string]$vaultSplat.ProjectName
         Environment = [string]$vaultSplat.Environment
     })
-    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Credential"   -Value ([OrderedHashtable]@{
+    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Credential"   -Value ([pscustomobject]@{
         UserName = [string]$configData.Vault.UserName
         Password = `
             if ($configData.Vault.Password -ne "") {
                 ConvertTo-SecureString -String $configData.Vault.Password -AsPlainText
             }
             else {
-                [securestring]::Empty
+                [securestring]::new()
             }
         Token    = [securestring]::Empty
     })
