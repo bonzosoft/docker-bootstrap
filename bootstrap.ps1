@@ -106,14 +106,20 @@ try {
     [pscustomobject]$vault = [pscustomobject]@{}
     Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Domain"       -Value ([uri]$vaultSplat.Domain)
     Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Project"      -Value ([OrderedHashtable]@{
-        Id          = [guid]::Empty
+        Id          = [string]""
         Name        = [string]$vaultSplat.ProjectName
         Environment = [string]$vaultSplat.Environment
     })
     Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Credential"   -Value ([OrderedHashtable]@{
-        UserName = [guid]::Empty
-        Password = [securestring]$null
-        Token    = [securestring]$null
+        UserName = [string]$configData.Vault.UserName
+        Password = `
+            if ($configData.Vault.Password -ne "") {
+                ConvertTo-SecureString -String $configData.Vault.Password -AsPlainText
+            }
+            else {
+                [securestring]::Empty
+            }
+        Token    = [securestring]::Empty
     })
 
 
@@ -123,7 +129,6 @@ try {
     Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Organization" -Value ([string]$repositorySplat.Organization)
     Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Name"         -Value ([string]$repositorySplat.Name)
     Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Branch"       -Value ([string]$repositorySplat.Branch)
-    Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Token"        -Value ([securestring]$null)
     Add-Member -InputObject $repository -MemberTYpe 'NoteProperty'   -Name "Path"         -Value ([IO.DirectoryInfo]$PWD.Path)
     Add-Member -InputObject $repository -MemberType 'ScriptProperty' -Name "FullName"     -Value ([scriptblock]{
         [IO.DirectoryInfo]$output = [IO.Path]::Join( [string[]]@($this.Directory, $this.Name) )
@@ -133,7 +138,17 @@ try {
         [uri]$output = [uri]::new($this.Domain, @($this.Organization, $this.Name) -join "/")
         return $output
     })
+    Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Token"        -Value ( `
+        if ($configData.Git.Token -ne "") {
+
+        } else {
+            [securestring]::Empty
+        })
    
+
+    $vault
+    $repository
+    return
 
     # Manual login -------------------------------------------------------------
     if ($Force.IsPresent -or
