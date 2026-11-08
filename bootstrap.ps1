@@ -137,12 +137,14 @@ try {
     Add-Member -InputObject $repository -MemberType 'ScriptProperty' -Name "Uri"          -Value ([scriptblock]{
         [uri]::new($this.Domain, @($this.Organization, $this.Name) -join "/")
     })
-    Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Token"        -Value ( `
-        if ([string]::IsNullOrWhiteSpace($configData.Git.Token)) {
-            [securestring]::new()
-        } else {
-            ConvertTo-SecureString -String $configData.Git.Token -AsPlainText
-        })
+    Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Credential"   -Value ([pscustomobject]@{
+        Token = `
+            if ([string]::IsNullOrWhiteSpace($configData.Git.Token)) {
+                [securestring]::new()
+            } else {
+                ConvertTo-SecureString -String $configData.Git.Token -AsPlainText
+            }
+    })
    
 
     $vault
