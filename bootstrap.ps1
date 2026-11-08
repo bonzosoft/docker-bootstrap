@@ -103,7 +103,7 @@ try {
 
     
     # Vault object creation ----------------------------------------------------
-    [pscustomobject]$vault = New-Object -TypeName "System.Management.Automation.PSCustomObject"
+    [pscustomobject]$vault = [pscustomobject]@{}
     Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Domain"       -Value ([uri]$vaultSplat.Domain)
     Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Project"      -Value ([OrderedHashtable]@{
         Id          = [guid]::Empty
@@ -116,8 +116,9 @@ try {
         Token    = [securestring]$null
     })
 
+
     # Repository object creation -----------------------------------------------
-    [pscustomobject]$repository = New-Object -TypeName "System.Management.Automation.PSCustomObject"
+    [pscustomobject]$repository = [pscustomobject]@{}
     Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Domain"       -Value ([uri]$repositorySplat.Domain)
     Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Organization" -Value ([string]$repositorySplat.Organization)
     Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Name"         -Value ([string]$repositorySplat.Name)
