@@ -116,6 +116,7 @@ try {
         Token    = [securestring]$null
     })
 
+    $vault.Credential.UserName
 
     # Repository object creation -----------------------------------------------
     [pscustomobject]$repository = [pscustomobject]@{}
