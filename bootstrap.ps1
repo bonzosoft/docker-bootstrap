@@ -101,7 +101,6 @@ try {
         [string]$configData.Git.Token = ""
     }
 
-    write-host "pasa"
     
     # Vault object creation ----------------------------------------------------
     [pscustomobject]$vault = [pscustomobject]@{}
@@ -112,22 +111,21 @@ try {
     Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Credential"   -Value ([pscustomobject]@{
         UserName = `
             if ([string]::IsNullOrWhiteSpace($configData.Vault.UserName)) {
-                return [guid]::Empty
+                [guid]::Empty
             }
             else {
-                return [guid]::Parse($configData.Vault.UserName)
+                [guid]::Parse($configData.Vault.UserName)
             }
         Password = `
             if ([string]::IsNullOrWhiteSpace($configData.Vault.Password)) {
-                return [securestring]@{}
+                [securestring]@{}
             }
             else {
-                return ConvertTo-SecureString -String $configData.Vault.Password -AsPlainText
+                ConvertTo-SecureString -String $configData.Vault.Password -AsPlainText
             }
         Token = [securestring]@{}
     })
 
-    write-host "pasa"
 
     # Repository object creation -----------------------------------------------
     [pscustomobject]$repository = [pscustomobject]@{}
@@ -145,14 +143,14 @@ try {
     Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Token"        -Value ([pscustomobject]@{
         Token = `
             if ([string]::IsNullOrWhiteSpace($configData.Git.Token)) {
-                return [securestring]@{}
+                [securestring]@{}
             }
             else {
-                return ConvertTo-SecureString -String $configData.Git.Token -AsPlainText
+                ConvertTo-SecureString -String $configData.Git.Token -AsPlainText
             }
     })
 
-    write-host "pasa"
+
     # Manual login -------------------------------------------------------------
     if ($Force.IsPresent -or
         $vault.Credential.Username -eq [guid]::Empty -or 
