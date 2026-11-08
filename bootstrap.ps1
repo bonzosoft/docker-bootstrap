@@ -148,6 +148,8 @@ try {
 
     $vault | Format-List * | Out-String
     $repository | Format-List * | Out-String
+    $repository.FullName
+    $repository.Uri
     return
 
     # Manual login -------------------------------------------------------------
