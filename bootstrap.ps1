@@ -105,7 +105,7 @@ try {
     # Vault object creation ----------------------------------------------------
     [pscustomobject]$vault = [pscustomobject]@{}
     Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Domain"       -Value ([uri]$vaultSplat.Domain)
-    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Project"      -Value ([pscutsomobject]@{
+    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Project"      -Value ([pscustomobject]@{
         Id          = [string]""
         Name        = [string]$vaultSplat.ProjectName
         Environment = [string]$vaultSplat.Environment
