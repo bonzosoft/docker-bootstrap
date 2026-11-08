@@ -113,13 +113,13 @@ try {
     Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Credential"   -Value ([pscustomobject]@{
         UserName = [string]$configData.Vault.UserName
         Password = `
-            if ($configData.Vault.Password -ne "") {
-                ConvertTo-SecureString -String $configData.Vault.Password -AsPlainText
-            }
-            else {
+            if ([string]::IsNullOrEmpty($configData.Vault.Password)) {
                 [securestring]::new()
             }
-        Token    = [securestring]::Empty
+            else {
+                ConvertTo-SecureString -String $configData.Vault.Password -AsPlainText
+            }
+        Token    = [securestring]::new()
     })
 
 
@@ -139,10 +139,10 @@ try {
         return $output
     })
     Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Token"        -Value ( `
-        if ($configData.Git.Token -ne "") {
-
+        if ([string]::IsNullOrWhiteSpace($configData.Git.Token)) {
+            [securestring]::new()
         } else {
-            [securestring]::Empty
+            ConvertTo-SecureString -String $configData.Git.Token -AsPlainText
         })
    
 
