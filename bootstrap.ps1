@@ -193,7 +193,8 @@ try {
             --env $vault.Project.Environment `
             --path "/" `
             --output json `
-            --telemetry=false |
+            --telemetry=false `
+            6> $null 5> $null  4> $null 3> $null 2> $null |
         ConvertFrom-Json `
             -AsHashtable |
         ForEach-Object `
@@ -219,19 +220,21 @@ try {
             throw "Unable to retrieve UserName from vault. Please check vault configuration."
         }
 
-        $vault | Format-List *
 
         # Infisical logout
         Write-Information -MessageData "Discarding manual login session."
         infisical `
             logout `
-            --silent
+            --silent `
+            6> $null 5> $null  4> $null 3> $null 2> $null 1> $null
         if ($LASTEXITCODE -ne 0) {
             throw "Command finished with exit code: $LASTEXITCODE."
         }
     }
 
     # Vault credential ---------------------------------------------------------
+    $vault | Format-List *
+    $configData | Format-List *
     $vault.Credential.UserName = $configData.Vault.Username
     $vault.Credential.Password = $configData.Vault.Password
 
