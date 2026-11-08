@@ -232,15 +232,6 @@ try {
     }
 
     # Vault credential ---------------------------------------------------------
-    $vault | Format-List *
-    $configData | Format-List *
-
-    $configData.Vault
-    write-host "uno"
-    $vault.Credential.UserName
-    write-host "dos"
-    $configData.Vault.UserName
-    write-host "tres"
     $vault.Credential.UserName = $configData.Vault.UserName
     $vault.Credential.Password = $configData.Vault.Password
 
