@@ -231,7 +231,7 @@ try {
 
     # Vault credential ---------------------------------------------------------
     $vault.Credential.UserName = [guid]::Parse($configData.Vault.UserName)
-    $vault.Credential.Password = ConverTo-SecureString -String $configData.Vault.Password -AsHashtable
+    $vault.Credential.Password = ConvertTo-SecureString -String $configData.Vault.Password -AsHashtable
 
 
     # Vault operations ---------------------------------------------------------
