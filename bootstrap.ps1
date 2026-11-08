@@ -116,7 +116,6 @@ try {
         Token    = [securestring]$null
     })
 
-    $vault.Credential.UserName
 
     # Repository object creation -----------------------------------------------
     [pscustomobject]$repository = [pscustomobject]@{}
@@ -239,7 +238,8 @@ try {
     # Vault operations ---------------------------------------------------------
     New-Item `
         -Path "Env:\INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET" `
-        -Value $vault.Credential.GetNetworkCredential().Password -Force |
+        -Value (ConvertFrom-SecureString -SecureString $vault.Credential.Password -AsPlainText) `
+        -Force |
     Out-Null
     try {
         New-Item `
