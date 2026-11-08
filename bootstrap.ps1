@@ -105,22 +105,13 @@ try {
     # Vault object creation ----------------------------------------------------
     [pscustomobject]$vault = [pscustomobject]@{}
     Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Domain"       -Value ([uri]$vaultSplat.Domain)
-    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Project"      -Value ([pscustomobject]@{
-        Id          = [string]""
-        Name        = [string]$vaultSplat.ProjectName
-        Environment = [string]$vaultSplat.Environment
-    })
-    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Credential"   -Value ([pscustomobject]@{
-        UserName = [string]$configData.Vault.UserName
-        Password = `
-            if ([string]::IsNullOrEmpty($configData.Vault.Password)) {
-                [securestring]::new()
-            }
-            else {
-                ConvertTo-SecureString -String $configData.Vault.Password -AsPlainText
-            }
-        Token    = [securestring]::new()
-    })
+    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "ProjectName"  -Value ([string]$vaultSplat.ProjectName)
+    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "ProjectId"    -Value ([guid]::Empty)
+    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Environment"  -Value ([string]$vaultSplat.Environment)
+    Add-Member -InputObject $vault -MemberType 'NoteProperty' -Name "Credential"   -Value ([pscredential]::new( `
+        $configData.Vault.UserName, `
+        (ConvertTo-SecureString -String $configData.Vault.Password -AsPlainText)
+    ))
 
 
     # Repository object creation -----------------------------------------------
@@ -136,20 +127,11 @@ try {
     Add-Member -InputObject $repository -MemberType 'ScriptProperty' -Name "Uri"          -Value ([scriptblock]{
         [uri]::new($this.Domain, @($this.Organization, $this.Name) -join "/")
     })
-    Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Credential"   -Value ([pscustomobject]@{
-        Token = `
-            if ([string]::IsNullOrWhiteSpace($configData.Git.Token)) {
-                [securestring]::new()
-            } else {
-                ConvertTo-SecureString -String $configData.Git.Token -AsPlainText
-            }
-    })
-   
+    Add-Member -InputObject $repository -MemberType 'NoteProperty'   -Name "Token"        -Value ([securestring]::new($configData.Git.Token))
 
     $vault | Format-List * | Out-String
     $repository | Format-List * | Out-String
-    $repository.FullName
-    $repository.Uri
+
     return
 
     # Manual login -------------------------------------------------------------
