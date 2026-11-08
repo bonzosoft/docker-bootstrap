@@ -101,6 +101,7 @@ try {
         [string]$configData.Git.Token = ""
     }
 
+    write-host "pasa"
     
     # Vault object creation ----------------------------------------------------
     [pscustomobject]$vault = [pscustomobject]@{}
@@ -125,6 +126,8 @@ try {
             }
         Token = [securestring]@{}
     })
+
+    write-host "pasa"
 
     # Repository object creation -----------------------------------------------
     [pscustomobject]$repository = [pscustomobject]@{}
