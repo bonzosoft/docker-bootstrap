@@ -237,11 +237,11 @@ try {
 
     $configData.Vault
     write-host "uno"
-    $vault.Credential.Username
+    $vault.Credential.UserName
     write-host "dos"
-    $configData.Vault.Username
+    $configData.Vault.UserName
     write-host "tres"
-    $vault.Credential.UserName = $configData.Vault.Username
+    $vault.Credential.UserName = $configData.Vault.UserName
     $vault.Credential.Password = $configData.Vault.Password
 
 
