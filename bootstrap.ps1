@@ -147,7 +147,9 @@ try {
                     login `
                     --domain $vault.Domain.AbsoluteUri `
                     --silent `
-                    --plain
+                    --plain |
+                ConvertTo-SecureString `
+                    -AsPlainText
             if ($LASTEXITCODE -ne 0) {
                 Write-Host "Unable to login. Press any key to continue or 'n' to abort login."
 
@@ -201,13 +203,10 @@ try {
                 
                 switch ($item.secretKey) {
                     "INFISICAL_CLIENT_ID_DEPLOYMENT_READONLY" {
-                        $configData.Vault.UserName = [guid]::Parse($item.secretValue)
+                        $configData.Vault.UserName = $item.secretValue
                     }
                     "INFISICAL_CLIENT_SECRET_DEPLOYMENT_READONLY" {
-                        $configData.Vault.Password = `
-                            ConvertTo-SecureString `
-                                -String $item.secretValue `
-                                -AsPlainText
+                        $configData.Vault.Password = $item.secretValue
                     }
                     default {
                         throw "Unexpected secret."
@@ -231,8 +230,8 @@ try {
     }
 
     # Vault credential ---------------------------------------------------------
-    $vault.Credential.UserName = $configData.Vault.UserName
-    $vault.Credential.Password = $configData.Vault.Password
+    $vault.Credential.UserName = [guid]::Parse($configData.Vault.UserName)
+    $vault.Credential.Password = ConverTo-SecureString -String $configData.Vault.Password -AsHashtable
 
 
     # Vault operations ---------------------------------------------------------
@@ -251,29 +250,29 @@ try {
         # Vault machine login --------------------------------------------------
         Write-Information -MessageData "Connecting with vault."
 
-        [string]$configData.Vault.Token = `
+        $vault.Token = `
             infisical `
                 login `
                 --domain $vault.Domain.AbsoluteUri `
                 --method=universal-auth `
-                --client-id $vault.Credential.GetNetworkCredential().UserName `
+                --client-id $vault.Credential.UserName `
                 --telemetry=false `
                 --plain `
-                --silent
+                --silent |
+            ConvertTo-SecureString `
+                -AsPlainText
         if ($LASTEXITCODE -ne 0) {
             throw "Unable to login using machine credentials. Please check vault configuration."
         }
-        if ([string]::IsNullOrWhiteSpace($configData.Vault.Token)) {
+        if ([string]::IsNullOrWhiteSpace($vault.Token)) {
             throw "Unexpected error: empty vault token."
         }
-        else {
-            [securestring]$vault.Token = ConvertTo-SecureString -String $configData.Vault.Token -AsPlainText
-        }
+
 
         # Retrieve git token ---------------------------------------------------
         Write-Information -MessageData "Retrieving repository access token."
 
-        [string]$configData.Git.Token = `
+        $repository.Token = `
             infisical `
                 sm secrets `
                 get "GITHUB_TOKEN_AST_BONZOSOFT_READONLY_ALL" `
@@ -283,15 +282,14 @@ try {
                 --env $vault.Environment `
                 --telemetry=false `
                 --plain `
-                --silent
+                --silent |
+            ConvertTo-SecureString `
+                -AsPlainText
         if ($LASTEXITCODE -ne 0) {
             throw "Unable to retrieve Github token. Please check vault configuration."
         }
-        if ([string]::IsNullOrWhiteSpace($configData.Git.Token)) {
+        if ([string]::IsNullOrWhiteSpace($repository.Token)) {
             throw "Empty Git token. Please check vault configuration."
-        }
-        else {
-            [securestring]$repository.Token = ConvertTo-SecureString -String $configData.Git.Token -AsPlainText
         }
     }
     finally {
@@ -336,6 +334,7 @@ try {
     else {
         # write correct cofiguration to config file
         Write-Information -MessageData "Persisting access information."
+        [string]$configData.Git.Token = ConvertFrom-SecureString -SecureString $repository.Token -AsPlainText
         Set-Content -Path $configFile -Value (ConvertTo-Json -InputObject $configData -Depth 9) -ErrorAction 'Continue'
     }
 
