@@ -508,14 +508,14 @@ try {
 
     
     # prepare for repository clonning ------------------------------------------
-    [IO.FileInfo]$repositoryBackup = ($repository.FullName.FullName + ".bak")
+    [IO.FileInfo]$repositoryBackup = ($repository.FullName.ToString() + ".bak")
 
-    if (Test-Path -Path $repository.Path -PathType 'Any') {
+    if (Test-Path -Path $repository.FullName -PathType 'Any') {
         Write-Information -MessageData "Backup up local resources."
         if (Test-Path -Path $repositoryBackup -PathType 'Any') {
             Remove-Item -Path $repositoryBackup -Force -Recurse
         }
-        Move-Item -Path $repository.Path -Destination $repositoryBackup -Force
+        Move-Item -Path $repository.FullName -Destination $repositoryBackup -Force
     }
     
 
