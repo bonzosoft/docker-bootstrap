@@ -410,24 +410,41 @@ try {
         # Retrieve git token ---------------------------------------------------
         Write-Information -MessageData "Retrieving repository access token."
 
-        $repository.Token = `
-            infisical `
-                sm secrets `
-                get "GITHUB_TOKEN_AST_BONZOSOFT_READONLY_ALL" `
-                --domain $vault.Domain.AbsoluteUri `
-                --projectId $vault.ProjectId `
-                --path "/" `
-                --env $vault.Environment `
-                --telemetry=false `
-                --plain `
-                --silent |
-            ConvertTo-SecureString `
+
+        New-Item `
+        -Path "Env:\INFISICAL_TOKEN" `
+        -Value (
+            ConvertFrom-SecureString `
+                -SecureString $vault.Token `
                 -AsPlainText
-        if ($LASTEXITCODE -ne 0) {
-            throw "Unable to retrieve Github token. Please check vault configuration."
+        ) `
+        -Force |
+    Out-Null
+        try {
+            $repository.Token = `
+                infisical `
+                    sm secrets `
+                    get "GITHUB_TOKEN_AST_BONZOSOFT_READONLY_ALL" `
+                    --domain $vault.Domain.AbsoluteUri `
+                    --projectId $vault.ProjectId `
+                    --path "/" `
+                    --env $vault.Environment `
+                    --telemetry=false `
+                    --plain `
+                    --silent |
+                ConvertTo-SecureString `
+                    -AsPlainText
+            if ($LASTEXITCODE -ne 0) {
+                throw "Unable to retrieve Github token. Please check vault configuration."
+            }
+            if ($repository.Token.Length -eq 0) {
+                throw "Empty Git token. Please check vault configuration."
+            }
         }
-        if ($repository.Token.Length -eq 0) {
-            throw "Empty Git token. Please check vault configuration."
+        finally {
+            Remove-Item `
+            -Path "Env:\INFISICAL_TOKEN" `
+            -ErrorAction 'SilentlyContinue'
         }
 
 
