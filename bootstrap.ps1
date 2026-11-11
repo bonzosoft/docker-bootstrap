@@ -258,7 +258,12 @@ try {
                         throw "Project not found in vault."
                     }
 
-                    $state = [AuthenticationState]::RetrieveCredentials
+                    if ($vault.ProjectId -ne [guid]::Empty) {
+                        $state = [AuthenticationState]::Authenticated
+                    }
+                    else {
+                        $state = [AuthenticationState]::RetrieveCredentials
+                    }
                 }
 
 
@@ -333,9 +338,6 @@ try {
 
                 # Universal Auth -------------------------------------------------
                 {$PSItem -in @([AuthenticationState]::InitialUniversalAuth, [AuthenticationState]::FinalUniversalAuth)} {
-                    $isFinalAttempt = (
-                        $state -eq [AuthenticationState]::FinalUniversalAuth
-                    )
 
                     # Check vault credentials -----------------------------------
                     New-Item `
@@ -365,7 +367,7 @@ try {
                                 -AsPlainText
 
                         if ($LASTEXITCODE -ne 0) {
-                            if ($isFinalAttempt) {
+                            if ($state -eq [AuthenticationState]::FinalUniversalAuth) {
                                 throw "Machine authentication failed."
                             }
 
@@ -374,7 +376,7 @@ try {
                             $state = [AuthenticationState]::ManualLogin
                         }
                         else {
-                            $state = [AuthenticationState]::Authenticated
+                            $state = [AuthenticationState]::RetrieveProject
                         }
                     }
                     finally {
@@ -421,13 +423,12 @@ try {
         -Force |
     Out-Null
         try {
-            # --projectId $vault.ProjectId `
-            
             $repository.Token = `
                 infisical `
                     sm secrets `
                     get "GITHUB_TOKEN_AST_BONZOSOFT_READONLY_ALL" `
                     --domain $vault.Domain.AbsoluteUri `
+                    --projectId $vault.ProjectId `
                     --path "/" `
                     --env $vault.Environment `
                     --telemetry=false `
