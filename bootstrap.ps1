@@ -421,12 +421,13 @@ try {
         -Force |
     Out-Null
         try {
+            # --projectId $vault.ProjectId `
+            
             $repository.Token = `
                 infisical `
                     sm secrets `
                     get "GITHUB_TOKEN_AST_BONZOSOFT_READONLY_ALL" `
                     --domain $vault.Domain.AbsoluteUri `
-                    --projectId $vault.ProjectId `
                     --path "/" `
                     --env $vault.Environment `
                     --telemetry=false `
