@@ -235,28 +235,46 @@ try {
                 RetrieveProject {
                     Write-Information -MessageData "Retrieving project id from vault."
 
-                    $vault.ProjectId = `
-                        infisical `
-                            sm projects list `
-                            --domain $vault.Domain.AbsoluteUri `
-                            --output=json `
-                            --telemetry=false |
-                        ConvertFrom-Json `
-                            -Depth 9 `
-                            -AsHashtable |
-                        ForEach-Object -Process {
-                            if ($PSItem.name -eq $vault.ProjectName) {
-                                return [guid]::Parse($PSItem.id)
+                    New-Item `
+                        -Path "Env:\INFISICAL_TOKEN" `
+                        -Value (
+                            ConvertFrom-SecureString `
+                                -SecureString $vault.Credential.Token `
+                                -AsPlainText
+                        ) `
+                        -Force |
+                    Out-Null
+
+                    try {
+                        $vault.ProjectId = `
+                            infisical `
+                                sm projects list `
+                                --domain $vault.Domain.AbsoluteUri `
+                                --output=json `
+                                --telemetry=false |
+                            ConvertFrom-Json `
+                                -Depth 9 `
+                                -AsHashtable |
+                            ForEach-Object -Process {
+                                if ($PSItem.name -eq $vault.ProjectName) {
+                                    return [guid]::Parse($PSItem.id)
+                                }
                             }
+
+                        if ($LASTEXITCODE -ne 0) {
+                            throw "Unable to retrieve project id from vault. Please check vault configuration."
                         }
 
-                    if ($LASTEXITCODE -ne 0) {
-                        throw "Unable to retrieve project id from vault. Please check vault configuration."
+                        if ($null -eq $vault.ProjectId -or $vault.ProjectId -eq [guid]::Empty) {
+                            throw "Project not found in vault."
+                        }
+                    }
+                    finally {
+                        Remove-Item `
+                        -Path "Env:\INFISICAL_TOKEN" `
+                        -ErrorAction 'SilentlyContinue'
                     }
 
-                    if ($null -eq $vault.ProjectId -or $vault.ProjectId -eq [guid]::Empty) {
-                        throw "Project not found in vault."
-                    }
 
                     if ($vault.ProjectId -ne [guid]::Empty) {
                         $state = [AuthenticationState]::Authenticated
@@ -409,11 +427,11 @@ try {
     Set-Content -Path $configFile -Value (ConvertTo-Json -InputObject $configData -Depth 9) -ErrorAction 'Continue'
 
     
-        # Retrieve git token ---------------------------------------------------
-        Write-Information -MessageData "Retrieving repository access token."
+    # Retrieve git token -------------------------------------------------------
+    Write-Information -MessageData "Retrieving repository access token."
 
 
-        New-Item `
+    New-Item `
         -Path "Env:\INFISICAL_TOKEN" `
         -Value (
             ConvertFrom-SecureString `
@@ -422,32 +440,33 @@ try {
         ) `
         -Force |
     Out-Null
-        try {
-            $repository.Token = `
-                infisical `
-                    sm secrets `
-                    get "GITHUB_TOKEN_AST_BONZOSOFT_READONLY_ALL" `
-                    --domain $vault.Domain.AbsoluteUri `
-                    --projectId $vault.ProjectId `
-                    --path "/" `
-                    --env $vault.Environment `
-                    --telemetry=false `
-                    --plain `
-                    --silent |
-                ConvertTo-SecureString `
-                    -AsPlainText
-            if ($LASTEXITCODE -ne 0) {
-                throw "Unable to retrieve Github token. Please check vault configuration."
-            }
-            if ($repository.Token.Length -eq 0) {
-                throw "Empty Git token. Please check vault configuration."
-            }
+
+    try {
+        $repository.Token = `
+            infisical `
+                sm secrets `
+                get "GITHUB_TOKEN_AST_BONZOSOFT_READONLY_ALL" `
+                --domain $vault.Domain.AbsoluteUri `
+                --projectId $vault.ProjectId `
+                --path "/" `
+                --env $vault.Environment `
+                --telemetry=false `
+                --plain `
+                --silent |
+            ConvertTo-SecureString `
+                -AsPlainText
+        if ($LASTEXITCODE -ne 0) {
+            throw "Unable to retrieve Github token. Please check vault configuration."
         }
-        finally {
-            Remove-Item `
-            -Path "Env:\INFISICAL_TOKEN" `
-            -ErrorAction 'SilentlyContinue'
+        if ($repository.Token.Length -eq 0) {
+            throw "Empty Git token. Please check vault configuration."
         }
+    }
+    finally {
+        Remove-Item `
+        -Path "Env:\INFISICAL_TOKEN" `
+        -ErrorAction 'SilentlyContinue'
+    }
 
 
 
