@@ -415,7 +415,7 @@ try {
         -Path "Env:\INFISICAL_TOKEN" `
         -Value (
             ConvertFrom-SecureString `
-                -SecureString $vault.Token `
+                -SecureString $vault.Credential.Token `
                 -AsPlainText
         ) `
         -Force |
