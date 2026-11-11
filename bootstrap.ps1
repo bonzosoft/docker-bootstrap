@@ -276,11 +276,11 @@ try {
                     }
 
 
-                    if ($vault.ProjectId -ne [guid]::Empty) {
-                        $state = [AuthenticationState]::Authenticated
+                    if ($invalidCredentials) {
+                        $state = [AuthenticationState]::RetrieveCredentials
                     }
                     else {
-                        $state = [AuthenticationState]::RetrieveCredentials
+                        $state = [AuthenticationState]::Authenticated
                     }
                 }
 
@@ -333,6 +333,7 @@ try {
                         throw "Unable to retrieve client secret from vault."
                     }
 
+                    $invalidCredentials = $false
                     $state = [AuthenticationState]::Logout
                 }
 
